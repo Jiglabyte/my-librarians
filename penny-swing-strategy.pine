@@ -1,0 +1,213 @@
+// This Pine Script™ is subject to the terms of the Mozilla Public License 2.0
+// https://mozilla.org/MPL/2.0/
+
+//@version=6
+strategy("Under $5 Daily Swing - Breakout & Pullback Reclaim v2", overlay=true, pyramiding=0,
+     initial_capital=1000,
+     default_qty_type=strategy.percent_of_equity, default_qty_value=15,
+     commission_type=strategy.commission.percent, commission_value=0.10,
+     slippage=2,
+     process_orders_on_close=false)
+
+// ─── INPUTS ────────────────────────────────────────────────────────────────────
+
+// Price & Liquidity
+minPrice        = input.float(1.0,  "Minimum Stock Price",           step=0.1,  group="Filters")
+maxPrice        = input.float(5.0,  "Maximum Stock Price",           step=0.1,  group="Filters")
+minDollarVolM   = input.float(5.0,  "Min Avg Dollar Volume ($M)",    step=0.5,  group="Filters")
+maxGapPct       = input.float(15.0, "Max Gap-Up From Prior Close (%)", step=1.0, group="Filters")
+
+// Trend
+emaFastLen      = input.int(10,  "Fast EMA",   minval=1, group="Trend")
+emaTrendLen     = input.int(21,  "Trend EMA",  minval=1, group="Trend")
+emaSlowLen      = input.int(50,  "Slow EMA",   minval=1, group="Trend")
+rsiLen          = input.int(14,  "RSI Length",  minval=1, group="Trend")
+rsiMin          = input.int(50,  "Minimum RSI", minval=1, maxval=100, group="Trend")
+
+// Breakout Entry
+useBreakoutEntry  = input.bool(true, "Use Breakout Entry",              group="Breakout")
+breakoutLookback  = input.int(10,    "Breakout Lookback Bars",  minval=2, group="Breakout")
+minRvol           = input.float(1.5, "Min Relative Volume (Breakout)", step=0.1, group="Breakout")
+maxConsolRange    = input.float(8.0, "Max Consolidation Range (%)",    step=0.5, group="Breakout")
+
+// Pullback Entry
+usePullbackEntry  = input.bool(true, "Use Pullback Reclaim Entry",       group="Pullback")
+pullbackLookback  = input.int(5,     "Pullback Lookback Bars",  minval=2, group="Pullback")
+minPullbackRvol   = input.float(1.2, "Min Relative Volume (Pullback)",  step=0.1, group="Pullback")
+
+// Shared entry filter
+maxDistancePct    = input.float(3.0, "Max Distance Above Fast EMA (%)", minval=0.1, step=0.1, group="Entry Filters")
+
+// Risk Management
+atrLen          = input.int(14,   "ATR Length",        minval=1,   group="Risk")
+stopATR         = input.float(1.5, "Stop Loss (ATR x)", minval=0.1, step=0.1, group="Risk")
+targetATR       = input.float(3.0, "Profit Target (ATR x)", minval=0.1, step=0.1, group="Risk")
+useTrailing     = input.bool(true,  "Use Trailing Stop After 1R",       group="Risk")
+trailATR        = input.float(1.2,  "Trailing Stop (ATR x)",  minval=0.1, step=0.1, group="Risk")
+
+// Trade management
+minHoldBars     = input.int(2,  "Minimum Hold Bars", minval=1,  group="Trade Mgmt")
+maxHoldBars     = input.int(10, "Maximum Hold Bars", minval=2,  group="Trade Mgmt")
+
+// Visuals
+showSignals     = input.bool(true, "Show Buy/Sell Labels", group="Visuals")
+highlightTrend  = input.bool(true, "Highlight Trend",      group="Visuals")
+
+// ─── CORE CALCULATIONS ────────────────────────────────────────────────────────
+
+emaFast  = ta.ema(close, emaFastLen)
+emaTrend = ta.ema(close, emaTrendLen)
+emaSlow  = ta.ema(close, emaSlowLen)
+rsiVal   = ta.rsi(close, rsiLen)
+atrVal   = ta.atr(atrLen)
+
+// Dollar volume (20-bar avg)
+avgDollarVolM = ta.sma(close * volume, 20) / 1000000.0
+
+// Relative volume: today's volume vs 20-day average
+avgVol = ta.sma(volume, 20)
+rVol   = avgVol > 0 ? volume / avgVol : 0.0
+
+// Gap from prior close
+gapPct = close[1] > 0 ? ((open - close[1]) / close[1]) * 100.0 : 0.0
+
+// ─── FILTERS ───────────────────────────────────────────────────────────────────
+
+priceOk     = close >= minPrice and close <= maxPrice
+liquidityOk = avgDollarVolM >= minDollarVolM
+noGapChase  = gapPct <= maxGapPct
+
+// Trend: price above trend EMA, fast above trend, trend above slow, RSI confirming
+trendOk = close > emaTrend and emaFast > emaTrend and emaTrend > emaSlow and rsiVal >= rsiMin
+
+// Don't enter if already extended above fast EMA
+distancePct    = ((close - emaFast) / emaFast) * 100.0
+notTooExtended = distancePct <= maxDistancePct and distancePct >= 0.0
+
+// Combined pre-entry filter
+baseFilter = strategy.position_size == 0 and priceOk and liquidityOk and noGapChase and trendOk and notTooExtended
+
+// ─── BREAKOUT ENTRY ────────────────────────────────────────────────────────────
+
+// Consolidation check: the range over the lookback period should be tight
+// This filters out "breakouts" from downtrends or wild chop
+consolHigh  = ta.highest(high[1], breakoutLookback)
+consolLow   = ta.lowest(low[1], breakoutLookback)
+consolRange = consolLow > 0 ? ((consolHigh - consolLow) / consolLow) * 100.0 : 999.0
+isTight     = consolRange <= maxConsolRange
+
+// Breakout: close above the consolidation high, with volume and tightness
+breakoutEntry = useBreakoutEntry and close > consolHigh and isTight and rVol >= minRvol
+
+// ─── PULLBACK ENTRY ────────────────────────────────────────────────────────────
+
+// A bar within the lookback touched or dipped below the fast EMA, then reclaimed
+recentPullback = ta.lowest(low, pullbackLookback) <= emaFast
+
+// Reclaim: current bar is bullish (close > open), closes above fast EMA, with volume
+pullbackEntry = usePullbackEntry and recentPullback and close > emaFast and close > open and rVol >= minPullbackRvol
+
+// ─── ENTRY EXECUTION ──────────────────────────────────────────────────────────
+
+longEntry = baseFilter and (breakoutEntry or pullbackEntry)
+
+// Store ATR at entry so stops/targets don't drift
+var float entryATR = na
+var int   entryBar = na
+
+if longEntry
+    entryATR := atrVal
+    strategy.entry("Long", strategy.long)
+
+// Track entry bar
+if strategy.position_size > 0 and strategy.position_size[1] <= 0
+    entryBar := bar_index
+if strategy.position_size <= 0
+    entryBar := na
+    entryATR := na
+
+barsInTrade = na(entryBar) ? 0 : bar_index - entryBar
+
+// ─── EXIT LOGIC ────────────────────────────────────────────────────────────────
+
+avgPrice = strategy.position_avg_price
+inTrade  = strategy.position_size > 0
+
+// Fixed stop and target based on entry ATR (won't drift)
+fixedStop   = inTrade and not na(entryATR) ? avgPrice - entryATR * stopATR   : na
+fixedTarget = inTrade and not na(entryATR) ? avgPrice + entryATR * targetATR : na
+
+// Trailing stop: activate after price reaches 1R profit, then trail at trailATR below high
+oneR        = inTrade and not na(entryATR) ? avgPrice + entryATR * stopATR : na
+reachedOneR = inTrade and not na(oneR) and high >= oneR
+
+var bool trailActive = false
+var float trailHigh  = na
+
+if not inTrade
+    trailActive := false
+    trailHigh  := na
+else if useTrailing and reachedOneR
+    trailActive := true
+    trailHigh  := na(trailHigh) ? high : math.max(trailHigh, high)
+
+trailStop = trailActive and not na(trailHigh) and not na(entryATR) ? trailHigh - entryATR * trailATR : na
+
+// Determine effective stop: use trailing stop if active and tighter than fixed stop
+effectiveStop = na
+if inTrade
+    if trailActive and not na(trailStop) and not na(fixedStop)
+        effectiveStop := math.max(fixedStop, trailStop)
+    else if not na(fixedStop)
+        effectiveStop := fixedStop
+
+// Place bracket exit order (stop + target) — no conflicting strategy.close calls
+if inTrade and not na(effectiveStop) and not na(fixedTarget)
+    strategy.exit("Long Exit", from_entry="Long", stop=effectiveStop, limit=fixedTarget)
+
+// Trend deterioration exit — only after minimum hold, and only if no bracket fill is imminent
+minHoldMet = inTrade and barsInTrade >= minHoldBars
+trendExit  = minHoldMet and close < emaFast and rsiVal < 45
+
+// Time-based exit — force close after max hold
+maxHoldMet = inTrade and barsInTrade >= maxHoldBars
+
+// Cancel bracket and close for trend/time exits to avoid conflicts
+if trendExit
+    strategy.cancel("Long Exit")
+    strategy.close("Long", comment="Trend Exit")
+if maxHoldMet
+    strategy.cancel("Long Exit")
+    strategy.close("Long", comment="Time Exit")
+
+// ─── VISUALS ───────────────────────────────────────────────────────────────────
+
+plot(emaFast,  "Fast EMA",  color=color.blue,   linewidth=2)
+plot(emaTrend, "Trend EMA", color=color.orange,  linewidth=2)
+plot(emaSlow,  "Slow EMA",  color=color.gray,    linewidth=2)
+
+// Show stop/target on chart when in a trade
+plot(inTrade ? effectiveStop : na, "Stop",   color=color.red,   style=plot.style_linebr, linewidth=1)
+plot(inTrade ? fixedTarget   : na, "Target", color=color.green, style=plot.style_linebr, linewidth=1)
+
+bgcolor(highlightTrend and trendOk ? color.new(color.green, 92) : na)
+
+// Entry labels: distinguish breakout vs pullback
+isBreakoutSignal  = showSignals and longEntry and breakoutEntry
+isPullbackSignal  = showSignals and longEntry and pullbackEntry and not breakoutEntry
+plotshape(isBreakoutSignal,  title="Breakout Entry",  text="BO",   style=shape.labelup, location=location.belowbar, size=size.tiny, color=color.green,  textcolor=color.white)
+plotshape(isPullbackSignal,  title="Pullback Entry",   text="PB",   style=shape.labelup, location=location.belowbar, size=size.tiny, color=color.teal,   textcolor=color.white)
+plotshape(showSignals and trendExit, title="Trend Exit", text="TREND", style=shape.labeldown, location=location.abovebar, size=size.tiny, color=color.red,    textcolor=color.white)
+plotshape(showSignals and maxHoldMet, title="Time Exit",  text="TIME",  style=shape.labeldown, location=location.abovebar, size=size.tiny, color=color.maroon, textcolor=color.white)
+
+// Relative volume info panel
+var table infoPanel = table.new(position.top_right, 2, 4, bgcolor=color.new(color.black, 80), border_width=1)
+if barstate.islast
+    table.cell(infoPanel, 0, 0, "Rel Volume",  text_color=color.white, text_size=size.small)
+    table.cell(infoPanel, 1, 0, str.tostring(rVol, "#.##") + "x", text_color=rVol >= minRvol ? color.lime : color.gray, text_size=size.small)
+    table.cell(infoPanel, 0, 1, "Avg $ Vol",   text_color=color.white, text_size=size.small)
+    table.cell(infoPanel, 1, 1, str.tostring(avgDollarVolM, "#.#") + "M", text_color=liquidityOk ? color.lime : color.gray, text_size=size.small)
+    table.cell(infoPanel, 0, 2, "RSI",         text_color=color.white, text_size=size.small)
+    table.cell(infoPanel, 1, 2, str.tostring(rsiVal, "#.#"), text_color=rsiVal >= rsiMin ? color.lime : color.gray, text_size=size.small)
+    table.cell(infoPanel, 0, 3, "Consol %",    text_color=color.white, text_size=size.small)
+    table.cell(infoPanel, 1, 3, str.tostring(consolRange, "#.#") + "%", text_color=isTight ? color.lime : color.gray, text_size=size.small)
