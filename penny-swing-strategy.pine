@@ -154,7 +154,7 @@ else if useTrailing and reachedOneR
 trailStop = trailActive and not na(trailHigh) and not na(entryATR) ? trailHigh - entryATR * trailATR : na
 
 // Determine effective stop: use trailing stop if active and tighter than fixed stop
-effectiveStop = na
+float effectiveStop = na
 if inTrade
     if trailActive and not na(trailStop) and not na(fixedStop)
         effectiveStop := math.max(fixedStop, trailStop)
