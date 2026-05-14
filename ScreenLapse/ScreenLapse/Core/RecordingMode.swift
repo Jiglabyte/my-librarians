@@ -59,9 +59,9 @@ enum QualityPreset: String, CaseIterable, Identifiable {
     func bitrate(for height: Int) -> Int {
         let base: Int
         switch self {
-        case .low:    base =  3_000_000
-        case .medium: base =  8_000_000
-        case .high:   base = 25_000_000
+        case .low:    base =  6_000_000
+        case .medium: base = 18_000_000
+        case .high:   base = 50_000_000
         }
         let scale = max(1.0, Double(height) / 1080.0)
         return Int(Double(base) * scale)

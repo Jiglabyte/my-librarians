@@ -83,6 +83,10 @@ case "$CMD" in
     run)
         "$0" debug
         APP_PATH="build/DerivedData/Build/Products/Debug/ScreenLapse.app"
+        echo "==> stopping any running instance"
+        osascript -e 'tell application "ScreenLapse" to quit' >/dev/null 2>&1 || true
+        pkill -x ScreenLapse 2>/dev/null || true
+        sleep 0.3
         echo "==> launching $APP_PATH"
         open "$APP_PATH"
         ;;
@@ -115,7 +119,11 @@ case "$CMD" in
             "$DMG_OUT"
 
         rm -rf "$STAGING"
-        echo "==> done: $DMG_OUT"
+        echo ""
+        echo "============================================"
+        echo "  DMG ready:  $DMG_OUT"
+        echo "  Open with:  open $DMG_OUT"
+        echo "============================================"
         ;;
     *)
         echo "usage: $0 {debug|release|run|dmg|clean}"

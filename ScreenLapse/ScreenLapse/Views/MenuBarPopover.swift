@@ -15,7 +15,7 @@ struct MenuBarPopover: View {
 
             Divider()
 
-            ScrollView {
+            ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 12) {
                     modePicker
 
@@ -36,13 +36,15 @@ struct MenuBarPopover: View {
                     }
 
                     if let err = manager.errorMessage {
-                        HStack(spacing: 6) {
+                        HStack(alignment: .top, spacing: 6) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.orange)
+                                .font(.caption)
                             Text(err)
                                 .font(.caption)
                                 .foregroundColor(.red)
                                 .lineLimit(3)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
@@ -58,7 +60,7 @@ struct MenuBarPopover: View {
             Divider()
 
             footer
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 14)
                 .padding(.vertical, 8)
         }
         .frame(width: 340)
@@ -68,22 +70,35 @@ struct MenuBarPopover: View {
         }
         .popover(isPresented: $showingRecents, arrowEdge: .trailing) {
             RecentRecordingsView()
-                .frame(width: 360, height: 400)
+                .frame(width: 380, height: 420)
         }
     }
 
     // MARK: - Header
 
     private var header: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "record.circle.fill")
-                .foregroundColor(.red)
-                .font(.system(size: 18, weight: .medium))
-            Text("ScreenLapse")
-                .font(.system(size: 14, weight: .semibold))
+        HStack(spacing: 9) {
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(
+                        colors: [.red, .red.opacity(0.7)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
+                    .frame(width: 24, height: 24)
+                Circle()
+                    .fill(Color.white.opacity(0.95))
+                    .frame(width: 9, height: 9)
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                Text("ScreenLapse")
+                    .font(.system(size: 14, weight: .semibold))
+                Text(manager.isRecording ? "Recording…" : "Ready")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
             Spacer()
             if manager.isRecording {
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     Circle()
                         .fill(Color.red)
                         .frame(width: 7, height: 7)
@@ -118,11 +133,11 @@ struct MenuBarPopover: View {
     private var liveStats: some View {
         HStack(spacing: 0) {
             statCell(label: "Elapsed", value: manager.formattedElapsed)
-            if manager.mode.isTimeLapse {
-                Divider().frame(height: 32)
-                statCell(label: "Output", value: formatDuration(manager.projectedOutputDuration))
-            }
             Divider().frame(height: 32)
+            if manager.mode.isTimeLapse {
+                statCell(label: "Output", value: formatDuration(manager.projectedOutputDuration))
+                Divider().frame(height: 32)
+            }
             statCell(label: "Size", value: manager.formattedFileSize)
             Divider().frame(height: 32)
             statCell(label: "Frames", value: "\(manager.capturedFrames)")
@@ -152,13 +167,7 @@ struct MenuBarPopover: View {
 
     private var recordButton: some View {
         Button {
-            Task {
-                if manager.isRecording {
-                    await manager.stopRecording()
-                } else {
-                    try? await manager.startRecording()
-                }
-            }
+            triggerRecord()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: manager.isRecording ? "stop.circle.fill" : "record.circle.fill")
@@ -174,18 +183,16 @@ struct MenuBarPopover: View {
         .controlSize(.large)
         .disabled(manager.isPreparing)
         .keyboardShortcut(.return, modifiers: [])
-        .help(manager.isRecording ? "Stop Recording (Return)" : "Start Recording (Return)")
+        .help(manager.isRecording
+              ? "Stop Recording  (Return or ⌃⇧R)"
+              : "Start Recording  (Return or ⌃⇧R)")
     }
 
     private var buttonLabel: String {
-        if manager.isPreparing {
-            return "Preparing…"
-        }
-        if manager.isRecording {
-            return "Stop Recording"
-        }
+        if manager.isPreparing { return "Preparing…" }
+        if manager.isRecording { return "Stop Recording" }
         if manager.countdownSeconds > 0 {
-            return "Record  (\(manager.countdownSeconds)s countdown)"
+            return "Start Recording   ·   \(manager.countdownSeconds)s countdown"
         }
         return "Start Recording"
     }
@@ -193,7 +200,7 @@ struct MenuBarPopover: View {
     // MARK: - Footer
 
     private var footer: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
             Button {
                 showingRecents.toggle()
             } label: {
@@ -201,7 +208,15 @@ struct MenuBarPopover: View {
                     .font(.system(size: 11))
             }
             .buttonStyle(.borderless)
-            .help("Recent Recordings")
+            .help("Recent recordings")
+
+            Text("·")
+                .foregroundColor(.secondary.opacity(0.5))
+
+            Text("⌃⇧R global")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(.secondary)
+                .help("Global hotkey: start/stop recording from anywhere")
 
             Spacer()
 
@@ -212,7 +227,7 @@ struct MenuBarPopover: View {
                     .font(.system(size: 13))
             }
             .buttonStyle(.borderless)
-            .help("Settings (⌘,)")
+            .help("Settings  (⌘,)")
             .keyboardShortcut(",", modifiers: .command)
 
             Button {
@@ -222,11 +237,22 @@ struct MenuBarPopover: View {
                     .font(.system(size: 13))
             }
             .buttonStyle(.borderless)
-            .help("Quit ScreenLapse")
+            .help("Quit ScreenLapse  (⌘Q)")
+            .keyboardShortcut("q", modifiers: .command)
         }
     }
 
     // MARK: - Helpers
+
+    private func triggerRecord() {
+        Task {
+            if manager.isRecording {
+                await manager.stopRecording()
+            } else {
+                try? await manager.startRecording()
+            }
+        }
+    }
 
     private func openSettings() {
         (NSApp.delegate as? AppDelegate)?.openSettings()

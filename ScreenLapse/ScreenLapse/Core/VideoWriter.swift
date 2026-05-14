@@ -36,6 +36,7 @@ final class VideoWriter {
                                            qos: .userInitiated)
     private var hasStartedSession = false
     private var firstPTS: CMTime?
+    private var lastAcceptedSec: Double = -.infinity
     private var frameIndex: Int64 = 0
     private(set) var frameCount: Int64 = 0
     private var didFinalize = false
@@ -143,7 +144,17 @@ final class VideoWriter {
         case .normal:
             if firstPTS == nil { firstPTS = inputPTS }
             pts = CMTimeSubtract(inputPTS, firstPTS ?? .zero)
-        case .timeLapse:
+
+        case .timeLapse(let mult):
+            // SCStream may ignore minimumFrameInterval — throttle manually here.
+            // Drop frames that arrive too soon after the previously accepted one.
+            let captureFPS = max(1, Int(RecordingMode.playbackFPS) / mult)
+            let minIntervalSec = 1.0 / Double(captureFPS)
+            let nowSec = CMTimeGetSeconds(inputPTS)
+            if nowSec - lastAcceptedSec < minIntervalSec * 0.95 {
+                return
+            }
+            lastAcceptedSec = nowSec
             pts = CMTime(value: frameIndex, timescale: RecordingMode.playbackFPS)
             frameIndex += 1
         }

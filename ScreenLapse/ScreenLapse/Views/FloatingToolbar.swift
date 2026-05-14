@@ -13,7 +13,7 @@ final class FloatingToolbarController {
 
     func show() {
         if panel != nil { return }
-        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 280, height: 56),
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 320, height: 64),
                             styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered,
                             defer: false)
@@ -28,15 +28,14 @@ final class FloatingToolbarController {
 
         let view = NSHostingView(rootView: FloatingToolbarView(onStop: { [weak self] in
             self?.onStop()
-        })
-            .environmentObject(manager))
+        }).environmentObject(manager))
         view.frame = panel.contentView!.bounds
         view.autoresizingMask = [.width, .height]
         panel.contentView?.addSubview(view)
 
         if let screen = NSScreen.main {
             let frame = screen.visibleFrame
-            let origin = CGPoint(x: frame.midX - 140, y: frame.maxY - 90)
+            let origin = CGPoint(x: frame.midX - 160, y: frame.maxY - 96)
             panel.setFrameOrigin(origin)
         }
         panel.orderFrontRegardless()
@@ -52,59 +51,71 @@ final class FloatingToolbarController {
 struct FloatingToolbarView: View {
     @EnvironmentObject var manager: RecordingManager
     let onStop: () -> Void
-    @State private var pulse = false
+    @State private var pulseScale: CGFloat = 1.0
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(Color.red.opacity(pulse ? 0.6 : 1.0))
-                    .frame(width: 14, height: 14)
+                    .fill(Color.red.opacity(0.35))
+                    .frame(width: 22, height: 22)
+                    .scaleEffect(pulseScale)
+                Circle()
+                    .fill(Color.red)
+                    .frame(width: 11, height: 11)
             }
             .onAppear {
-                withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
-                    pulse.toggle()
+                withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
+                    pulseScale = 1.5
                 }
             }
 
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(badgeText)
-                        .font(.caption2.weight(.bold))
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 6)
+                        .padding(.horizontal, 7)
                         .padding(.vertical, 2)
-                        .background(Color.red.opacity(0.85))
-                        .cornerRadius(4)
+                        .background(badgeColor)
+                        .cornerRadius(5)
                     Text(manager.formattedElapsed)
-                        .font(.system(.body, design: .monospaced))
+                        .font(.system(size: 14, weight: .semibold, design: .monospaced))
                         .foregroundColor(.white)
                 }
-                Text(manager.formattedFileSize)
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.7))
+                HStack(spacing: 6) {
+                    Text(manager.formattedFileSize)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.75))
+                    Text("·")
+                        .foregroundColor(.white.opacity(0.4))
+                    Text("⌃⇧R to stop")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.55))
+                }
             }
 
             Spacer(minLength: 4)
 
             Button(action: onStop) {
                 Image(systemName: "stop.fill")
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.white)
-                    .padding(8)
+                    .padding(10)
                     .background(Color.red)
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
-            .help("Stop recording")
+            .help("Stop recording (⌃⇧R)")
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
         .background(
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 16)
                 .fill(.ultraThinMaterial)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
                 )
         )
         .padding(2)
@@ -112,8 +123,15 @@ struct FloatingToolbarView: View {
 
     private var badgeText: String {
         switch manager.mode {
-        case .normal: return "REC"
+        case .normal(let fps): return "REC \(fps)"
         case .timeLapse(let mult): return "⏵⏵ \(mult)×"
+        }
+    }
+
+    private var badgeColor: Color {
+        switch manager.mode {
+        case .normal: return .red.opacity(0.88)
+        case .timeLapse: return .orange.opacity(0.9)
         }
     }
 }
