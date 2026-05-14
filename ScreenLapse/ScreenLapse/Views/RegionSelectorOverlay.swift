@@ -61,15 +61,16 @@ private final class RegionWindowController: NSWindowController {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
 
         let view = RegionSelectorView(frame: screen.frame, screen: screen)
+        panel.contentView = view
+        panel.makeKey()
+
+        super.init(window: panel)
+
         view.onSelected = { [displayID, weak self] rect in
             let result = RegionSelectorOverlay.Result(rect: rect, displayID: displayID)
             self?.onFinish(result)
         }
         view.onCancel = { [weak self] in self?.onFinish(nil) }
-        panel.contentView = view
-        panel.makeKey()
-
-        super.init(window: panel)
     }
 
     required init?(coder: NSCoder) { fatalError() }

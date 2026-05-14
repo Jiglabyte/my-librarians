@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import SwiftUI
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let recordingManager = RecordingManager()
 
@@ -49,14 +50,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        if recordingManager.isRecording {
-            let semaphore = DispatchSemaphore(value: 0)
-            Task {
-                await recordingManager.stopRecording()
-                semaphore.signal()
-            }
-            _ = semaphore.wait(timeout: .now() + 5)
-        }
+        guard recordingManager.isRecording else { return }
+        Task { await recordingManager.stopRecording() }
     }
 
     @objc private func togglePopover(_ sender: Any?) {
