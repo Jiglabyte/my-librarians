@@ -136,6 +136,7 @@ final class VideoWriter {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
         let inputPTS = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+        guard inputPTS.isValid, inputPTS != .negativeInfinity else { return }
 
         let pts: CMTime
         switch configuration.mode {

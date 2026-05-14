@@ -12,8 +12,7 @@ struct SettingsView: View {
             generalTab.tabItem { Label("General", systemImage: "gear") }
             aboutTab.tabItem { Label("About", systemImage: "info.circle") }
         }
-        .frame(width: 520, height: 420)
-        .padding(20)
+        .frame(width: 520, height: 460)
     }
 
     // MARK: - Recording

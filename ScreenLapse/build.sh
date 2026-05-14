@@ -26,8 +26,17 @@ require_xcodebuild() {
     fi
 }
 
+ensure_icon() {
+    local sentinel="ScreenLapse/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png"
+    if [[ ! -f "$sentinel" ]]; then
+        echo "==> generating app icon (first run)"
+        swift create_icon.swift
+    fi
+}
+
 generate() {
     require_xcodegen
+    ensure_icon
     echo "==> generating ScreenLapse.xcodeproj"
     xcodegen generate
 }

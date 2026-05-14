@@ -9,14 +9,14 @@ struct TimeLapseModeView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
+            // Speed picker
             HStack {
-                Text("Time-lapse speed")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                compactLabel("Speed")
                 Spacer()
                 Text("\(currentMultiplier)× faster")
                     .font(.caption.weight(.semibold))
+                    .foregroundColor(.accentColor)
             }
             Picker("", selection: Binding(
                 get: { currentMultiplier },
@@ -29,21 +29,86 @@ struct TimeLapseModeView: View {
             .pickerStyle(.segmented)
             .disabled(manager.isRecording || manager.isPreparing)
 
-            Text("1 hour of work → \(estimatedOutput(multiplier: currentMultiplier))")
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            // Quick estimate
+            HStack(spacing: 16) {
+                estimateCell(realMinutes: 10, multiplier: currentMultiplier)
+                estimateCell(realMinutes: 60, multiplier: currentMultiplier)
+                estimateCell(realMinutes: 480, multiplier: currentMultiplier)
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(Color.secondary.opacity(0.07))
+            .cornerRadius(7)
 
-            Text("Audio is disabled in time-lapse mode.")
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            // Quality + Resolution
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
+                    compactLabel("Quality")
+                    Picker("", selection: Binding(
+                        get: { manager.quality },
+                        set: { manager.quality = $0 }
+                    )) {
+                        Text("Low").tag(QualityPreset.low)
+                        Text("Med").tag(QualityPreset.medium)
+                        Text("High").tag(QualityPreset.high)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    compactLabel("Resolution")
+                    Picker("", selection: Binding(
+                        get: { manager.resolution },
+                        set: { manager.resolution = $0 }
+                    )) {
+                        ForEach(OutputResolution.allCases) { r in
+                            Text(r.displayName).tag(r)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .disabled(manager.isRecording || manager.isPreparing)
+
+            HStack(spacing: 4) {
+                Image(systemName: "speaker.slash.fill")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Text("Audio disabled in time-lapse mode")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 
-    private func estimatedOutput(multiplier: Int) -> String {
-        let seconds = 3600 / multiplier
-        let m = seconds / 60
-        let s = seconds % 60
-        if m > 0 { return "\(m)m \(s)s of video" }
-        return "\(s)s of video"
+    private func estimateCell(realMinutes: Int, multiplier: Int) -> some View {
+        let outputSec = (realMinutes * 60) / multiplier
+        let label: String
+        if realMinutes >= 60 {
+            label = "\(realMinutes / 60)h real"
+        } else {
+            label = "\(realMinutes)m real"
+        }
+        return VStack(spacing: 1) {
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundColor(.secondary)
+            Text(formatSec(outputSec))
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func formatSec(_ sec: Int) -> String {
+        if sec < 60 { return "\(sec)s" }
+        return "\(sec / 60)m\(sec % 60 > 0 ? " \(sec % 60)s" : "")"
+    }
+
+    private func compactLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundColor(.secondary)
     }
 }

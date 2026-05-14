@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
     private var pulseTimer: Timer?
     private var pulseOn = false
+    private var settingsWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -30,7 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover = NSPopover()
         popover.behavior = .transient
         popover.animates = true
-        popover.contentSize = NSSize(width: 340, height: 460)
+        popover.contentSize = NSSize(width: 340, height: 500)
         popover.contentViewController = NSHostingController(
             rootView: MenuBarPopover()
                 .environmentObject(recordingManager)
@@ -71,22 +72,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showContextMenu() {
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: recordingManager.isRecording
-                                ? "Stop Recording"
-                                : "Start Recording",
-                                action: #selector(menuToggleRecording),
-                                keyEquivalent: ""))
+
+        let recItem = NSMenuItem(
+            title: recordingManager.isRecording ? "Stop Recording" : "Start Recording",
+            action: #selector(menuToggleRecording),
+            keyEquivalent: "r"
+        )
+        recItem.keyEquivalentModifierMask = [.control, .shift]
+        menu.addItem(recItem)
+
         menu.addItem(NSMenuItem.separator())
+
         menu.addItem(NSMenuItem(title: "Open Recordings Folder",
                                 action: #selector(openRecordingsFolder),
                                 keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Settings…",
-                                action: #selector(openSettings),
-                                keyEquivalent: ","))
+
+        let settingsItem = NSMenuItem(title: "Settings…",
+                                      action: #selector(openSettings),
+                                      keyEquivalent: ",")
+        settingsItem.keyEquivalentModifierMask = .command
+        menu.addItem(settingsItem)
+
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit ScreenLapse",
                                 action: #selector(NSApplication.terminate(_:)),
                                 keyEquivalent: "q"))
+
         menu.items.forEach { $0.target = self }
         menu.items.last?.target = NSApp
         statusItem.menu = menu
@@ -100,12 +111,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.activateFileViewerSelecting([recordingManager.outputFolderURL])
     }
 
-    @objc private func openSettings() {
-        if #available(macOS 14.0, *) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        } else {
-            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+    @objc func openSettings(_ sender: Any? = nil) {
+        if settingsWindow == nil {
+            let host = NSHostingController(
+                rootView: SettingsView().environmentObject(recordingManager)
+            )
+            let win = NSWindow(contentViewController: host)
+            win.title = "ScreenLapse Settings"
+            win.styleMask = [.titled, .closable]
+            win.isReleasedWhenClosed = false
+            win.setFrameAutosaveName("ScreenLapseSettings")
+            win.center()
+            settingsWindow = win
         }
+        settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
