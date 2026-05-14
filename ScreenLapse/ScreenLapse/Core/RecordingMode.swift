@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 enum RecordingMode: Equatable, Hashable {
     case normal(fps: Int)
