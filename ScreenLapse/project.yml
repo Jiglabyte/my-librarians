@@ -1,0 +1,57 @@
+name: ScreenLapse
+options:
+  bundleIdPrefix: com.screenlapse
+  deploymentTarget:
+    macOS: "13.0"
+  developmentLanguage: en
+  xcodeVersion: "15.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+targets:
+  ScreenLapse:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: ScreenLapse
+        excludes:
+          - "**/*.md"
+    info:
+      path: ScreenLapse/Info.plist
+      properties:
+        CFBundleName: ScreenLapse
+        CFBundleDisplayName: ScreenLapse
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        CFBundleIdentifier: com.screenlapse.app
+        LSMinimumSystemVersion: "13.0"
+        LSUIElement: true
+        NSScreenCaptureUsageDescription: "ScreenLapse needs screen recording access to capture your screen."
+        NSCameraUsageDescription: "ScreenLapse uses the camera for the optional webcam overlay."
+        NSMicrophoneUsageDescription: "ScreenLapse uses the microphone to record your voice during recordings."
+        NSHumanReadableCopyright: "ScreenLapse — open source, MIT License."
+        NSPrincipalClass: NSApplication
+        NSHighResolutionCapable: true
+    entitlements:
+      path: ScreenLapse/ScreenLapse.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+        com.apple.security.device.camera: true
+        com.apple.security.device.audio-input: true
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.screenlapse.app
+        PRODUCT_NAME: ScreenLapse
+        INFOPLIST_FILE: ScreenLapse/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ScreenLapse/ScreenLapse.entitlements
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: YES
+        COMBINE_HIDPI_IMAGES: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_PREVIEWS: YES
+        SWIFT_OPTIMIZATION_LEVEL: "-O"
+        DEAD_CODE_STRIPPING: YES
