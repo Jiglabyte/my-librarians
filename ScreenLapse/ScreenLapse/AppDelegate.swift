@@ -37,11 +37,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .environmentObject(recordingManager)
         )
 
+        // Close popover the moment recording preparation begins (before countdown),
+        // so the popover never appears in the first frames of a capture.
+        recordingManager.$isPreparing
+            .receive(on: DispatchQueue.main)
+            .filter { $0 }
+            .sink { [weak self] _ in self?.popover.performClose(nil) }
+            .store(in: &cancellables)
+
         recordingManager.$isRecording
             .receive(on: DispatchQueue.main)
             .sink { [weak self] recording in
+                if recording { self?.popover.performClose(nil) }
                 self?.updateStatusItemIcon(recording: recording)
                 self?.updateFloatingToolbar(recording: recording)
+            }
+            .store(in: &cancellables)
+
+        // Reveal finished recording in Finder so the user can find it immediately.
+        recordingManager.$lastRecordingURL
+            .compactMap { $0 }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { url in
+                NSWorkspace.shared.activateFileViewerSelecting([url])
             }
             .store(in: &cancellables)
 

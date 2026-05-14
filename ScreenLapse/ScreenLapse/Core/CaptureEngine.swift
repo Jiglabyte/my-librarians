@@ -41,6 +41,10 @@ final class CaptureEngine: NSObject {
         let baseWidth: Int
         let baseHeight: Int
 
+        // Exclude ScreenLapse itself so our popover/toolbar never appear in recordings.
+        let myBundleID = Bundle.main.bundleIdentifier ?? "com.screenlapse.app"
+        let selfApps = content.applications.filter { $0.bundleIdentifier == myBundleID }
+
         switch source {
         case .display(let id, _):
             guard let display = content.displays.first(where: { $0.displayID == id })
@@ -48,7 +52,7 @@ final class CaptureEngine: NSObject {
                 throw CaptureError.noDisplay
             }
             filter = SCContentFilter(display: display,
-                                     excludingApplications: [],
+                                     excludingApplications: selfApps,
                                      exceptingWindows: [])
             cropRect = nil
             baseWidth = display.width
@@ -69,7 +73,7 @@ final class CaptureEngine: NSObject {
                 throw CaptureError.noDisplay
             }
             filter = SCContentFilter(display: display,
-                                     excludingApplications: [],
+                                     excludingApplications: selfApps,
                                      exceptingWindows: [])
             cropRect = rect
             baseWidth = Int(rect.width)

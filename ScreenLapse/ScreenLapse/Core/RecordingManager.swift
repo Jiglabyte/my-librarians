@@ -99,7 +99,11 @@ final class RecordingManager: ObservableObject {
             let content = try await CaptureEngine.fetchShareableContent()
             var list: [CaptureSource] = []
             for display in content.displays {
-                let name = "Display \(display.displayID) (\(display.width)×\(display.height))"
+                let screenName = NSScreen.screens.first { screen in
+                    let num = screen.deviceDescription[NSDeviceDescriptionKey(rawValue: "NSScreenNumber")] as? CGDirectDisplayID
+                    return num == display.displayID
+                }?.localizedName ?? "Display"
+                let name = "\(screenName) (\(display.width)×\(display.height))"
                 list.append(.display(id: display.displayID, name: name))
             }
             for window in content.windows {
