@@ -66,7 +66,7 @@ func drawIcon(pixelSize size: Int) -> CGImage {
         startRadius: 0,
         endCenter: CGPoint(x: cx, y: cy),
         endRadius: dotR * 1.05,
-        options: [.beforeStartLocation, .afterEndLocation]
+        options: [.drawsBeforeStartLocation, .drawsAfterEndLocation]
     )
 
     // Specular shine (top arc, translucent white)
