@@ -245,6 +245,11 @@ struct MenuBarPopover: View {
     // MARK: - Helpers
 
     private func triggerRecord() {
+        // Hide the popover synchronously so it can never appear in the recording —
+        // not even for the few frames between click and capture-start.
+        if !manager.isRecording {
+            (NSApp.delegate as? AppDelegate)?.hidePopover()
+        }
         Task {
             if manager.isRecording {
                 await manager.stopRecording()

@@ -35,7 +35,7 @@ final class VideoWriter {
     private let writeQueue = DispatchQueue(label: "com.screenlapse.writer",
                                            qos: .userInitiated)
     private var hasStartedSession = false
-    private var firstPTS: CMTime?
+    private var sessionStartPTS: CMTime?
     private var lastAcceptedSec: Double = -.infinity
     private var frameIndex: Int64 = 0
     private(set) var frameCount: Int64 = 0
@@ -142,8 +142,9 @@ final class VideoWriter {
         let pts: CMTime
         switch configuration.mode {
         case .normal:
-            if firstPTS == nil { firstPTS = inputPTS }
-            pts = CMTimeSubtract(inputPTS, firstPTS ?? .zero)
+            // Use the original PTS. We anchor the session at the first PTS below,
+            // so video and audio share the same timeline (no 44-hour-file bug).
+            pts = inputPTS
 
         case .timeLapse(let mult):
             // SCStream may ignore minimumFrameInterval — throttle manually here.
@@ -160,7 +161,16 @@ final class VideoWriter {
         }
 
         if !hasStartedSession {
-            writer.startSession(atSourceTime: .zero)
+            // For Normal mode, anchor the file's t=0 at the first video PTS so audio
+            // (which arrives with absolute system-uptime PTS) lands at the right offset.
+            // For Time-lapse, our synthetic PTS already starts at 0.
+            let sessionStart: CMTime
+            switch configuration.mode {
+            case .normal:    sessionStart = pts
+            case .timeLapse: sessionStart = .zero
+            }
+            writer.startSession(atSourceTime: sessionStart)
+            sessionStartPTS = sessionStart
             hasStartedSession = true
         }
 
@@ -174,6 +184,14 @@ final class VideoWriter {
         guard !didFinalize, let audioInput = audioInput, hasStartedSession else { return }
         guard configuration.mode.isTimeLapse == false else { return }
         guard audioInput.isReadyForMoreMediaData else { return }
+
+        // Drop audio samples that arrive before the session anchor (would be rejected anyway).
+        let audioPTS = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+        if let anchor = sessionStartPTS,
+           audioPTS.isValid,
+           CMTimeCompare(audioPTS, anchor) < 0 {
+            return
+        }
         audioInput.append(sampleBuffer)
     }
 

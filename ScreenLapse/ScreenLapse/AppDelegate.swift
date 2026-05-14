@@ -42,13 +42,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         recordingManager.$isPreparing
             .receive(on: DispatchQueue.main)
             .filter { $0 }
-            .sink { [weak self] _ in self?.popover.performClose(nil) }
+            .sink { [weak self] _ in self?.hidePopover() }
             .store(in: &cancellables)
 
         recordingManager.$isRecording
             .receive(on: DispatchQueue.main)
             .sink { [weak self] recording in
-                if recording { self?.popover.performClose(nil) }
+                if recording { self?.hidePopover() }
                 self?.updateStatusItemIcon(recording: recording)
                 self?.updateFloatingToolbar(recording: recording)
             }
@@ -87,6 +87,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
+    }
+
+    // Force-close the popover (synchronous, can't be cancelled by the delegate).
+    // Used when recording begins so the popover can't appear in captured frames.
+    func hidePopover() {
+        if popover.isShown { popover.close() }
     }
 
     private func showContextMenu() {
