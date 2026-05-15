@@ -3,7 +3,7 @@ import Combine
 import SwiftUI
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let recordingManager = RecordingManager()
 
     private var statusItem: NSStatusItem!
@@ -14,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pulseTimer: Timer?
     private var pulseOn = false
     private var settingsWindow: NSWindow?
+    private var recentsWindow: NSWindow?
+    private var pendingTermination = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -69,9 +71,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    func applicationWillTerminate(_ notification: Notification) {
-        guard recordingManager.isRecording else { return }
-        Task { await recordingManager.stopRecording() }
+    // Wait for a clean stop before letting macOS kill us — otherwise the MP4 is corrupt.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard recordingManager.isRecording, !pendingTermination else { return .terminateNow }
+        pendingTermination = true
+        Task { @MainActor in
+            await recordingManager.stopRecording()
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 
     @objc private func togglePopover(_ sender: Any?) {
@@ -112,8 +120,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                 action: #selector(openRecordingsFolder),
                                 keyEquivalent: ""))
 
+        menu.addItem(NSMenuItem(title: "Recent Recordings…",
+                                action: #selector(openRecents(_:)),
+                                keyEquivalent: ""))
+
         let settingsItem = NSMenuItem(title: "Settings…",
-                                      action: #selector(openSettings),
+                                      action: #selector(openSettings(_:)),
                                       keyEquivalent: ",")
         settingsItem.keyEquivalentModifierMask = .command
         menu.addItem(settingsItem)
@@ -138,19 +150,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func openSettings(_ sender: Any? = nil) {
         if settingsWindow == nil {
-            let host = NSHostingController(
-                rootView: SettingsView().environmentObject(recordingManager)
-            )
-            let win = NSWindow(contentViewController: host)
-            win.title = "ScreenLapse Settings"
-            win.styleMask = [.titled, .closable]
-            win.isReleasedWhenClosed = false
-            win.setFrameAutosaveName("ScreenLapseSettings")
-            win.center()
-            settingsWindow = win
+            settingsWindow = makeWindow(title: "ScreenLapse Settings",
+                                        view: SettingsView(),
+                                        size: NSSize(width: 520, height: 460),
+                                        autosaveName: "ScreenLapseSettings")
         }
-        settingsWindow?.makeKeyAndOrderFront(nil)
+        bringWindowToFront(settingsWindow)
+    }
+
+    @objc func openRecents(_ sender: Any? = nil) {
+        if recentsWindow == nil {
+            recentsWindow = makeWindow(title: "Recent Recordings",
+                                       view: RecentRecordingsView(),
+                                       size: NSSize(width: 520, height: 480),
+                                       autosaveName: "ScreenLapseRecents")
+        }
+        bringWindowToFront(recentsWindow)
+    }
+
+    private func makeWindow<V: View>(title: String,
+                                     view: V,
+                                     size: NSSize,
+                                     autosaveName: String) -> NSWindow {
+        let host = NSHostingController(rootView: view.environmentObject(recordingManager))
+        let win = NSWindow(contentViewController: host)
+        win.title = title
+        win.styleMask = [.titled, .closable, .resizable, .miniaturizable]
+        win.isReleasedWhenClosed = false
+        win.setContentSize(size)
+        win.setFrameAutosaveName(autosaveName)
+        win.center()
+        win.delegate = self
+        return win
+    }
+
+    // Menu-bar (.accessory) apps can't activate a window above other apps with
+    // NSApp.activate alone. Briefly promote to .regular so the window reaches
+    // the front; demote back when no managed windows are visible.
+    private func bringWindowToFront(_ window: NSWindow?) {
+        guard let window else { return }
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+    }
+
+    nonisolated func windowWillClose(_ notification: Notification) {
+        Task { @MainActor [weak self] in
+            // Wait a runloop tick so isVisible reflects the close.
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            self?.demoteIfNoVisibleWindows()
+        }
+    }
+
+    private func demoteIfNoVisibleWindows() {
+        let anyVisible = (settingsWindow?.isVisible ?? false)
+                      || (recentsWindow?.isVisible ?? false)
+        if !anyVisible {
+            NSApp.setActivationPolicy(.accessory)
+        }
     }
 
     private func toggleRecording() {

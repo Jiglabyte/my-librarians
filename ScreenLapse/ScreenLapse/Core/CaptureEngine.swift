@@ -3,6 +3,7 @@ import ScreenCaptureKit
 import AVFoundation
 import CoreMedia
 import CoreGraphics
+import AppKit
 
 final class CaptureEngine: NSObject {
     enum CaptureError: Error {
@@ -27,6 +28,14 @@ final class CaptureEngine: NSObject {
     static func fetchShareableContent() async throws -> SCShareableContent {
         try await SCShareableContent.excludingDesktopWindows(false,
                                                              onScreenWindowsOnly: true)
+    }
+
+    static func backingScale(for displayID: CGDirectDisplayID) -> CGFloat {
+        let screen = NSScreen.screens.first { screen in
+            let n = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
+            return n == displayID
+        }
+        return screen?.backingScaleFactor ?? 2.0
     }
 
     func startCapture(source: CaptureSource,
@@ -76,8 +85,12 @@ final class CaptureEngine: NSObject {
                                      excludingApplications: selfApps,
                                      exceptingWindows: [])
             cropRect = rect
-            baseWidth = Int(rect.width)
-            baseHeight = Int(rect.height)
+            // rect is in points (NSScreen coords). SCStreamConfiguration.width/height
+            // are pixels, so multiply by the display's backing scale to capture at
+            // native resolution on Retina.
+            let scale = Self.backingScale(for: displayID)
+            baseWidth = max(2, Int((rect.width * scale).rounded()))
+            baseHeight = max(2, Int((rect.height * scale).rounded()))
         }
 
         let config = SCStreamConfiguration()
@@ -89,9 +102,8 @@ final class CaptureEngine: NSObject {
         config.showsCursor = showsCursor
         config.scalesToFit = false
         if let crop = cropRect {
+            // sourceRect is in points (display coords); width/height above are pixels.
             config.sourceRect = crop
-            config.width = max(2, Int(crop.width))
-            config.height = max(2, Int(crop.height))
         }
         if capturesAudio {
             config.capturesAudio = true

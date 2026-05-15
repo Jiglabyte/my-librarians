@@ -144,6 +144,13 @@ final class RecordingManager: ObservableObject {
             _ = await PermissionChecker.requestCamera()
         }
 
+        // Refuse to start if disk is nearly full — avoids a corrupt/truncated file mid-recording.
+        let freeBytes = (try? outputFolderURL.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?.volumeAvailableCapacityForImportantUsage ?? Int64.max
+        if freeBytes < 100_000_000 {
+            errorMessage = "Not enough disk space (need ≥ 100 MB free, have \(ByteCountFormatter.string(fromByteCount: freeBytes, countStyle: .file)))."
+            return
+        }
+
         isPreparing = true
         errorMessage = nil
 

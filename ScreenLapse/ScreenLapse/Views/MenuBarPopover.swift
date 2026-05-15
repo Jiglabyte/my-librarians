@@ -4,7 +4,6 @@ import AppKit
 struct MenuBarPopover: View {
     @EnvironmentObject var manager: RecordingManager
     @State private var modeTabIndex: Int = 0
-    @State private var showingRecents = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -66,11 +65,6 @@ struct MenuBarPopover: View {
         .frame(width: 340)
         .onAppear {
             modeTabIndex = manager.mode.isTimeLapse ? 1 : 0
-            Task { await manager.refreshSources() }
-        }
-        .popover(isPresented: $showingRecents, arrowEdge: .trailing) {
-            RecentRecordingsView()
-                .frame(width: 380, height: 420)
         }
     }
 
@@ -202,7 +196,7 @@ struct MenuBarPopover: View {
     private var footer: some View {
         HStack(spacing: 6) {
             Button {
-                showingRecents.toggle()
+                (NSApp.delegate as? AppDelegate)?.openRecents()
             } label: {
                 Label("Recents", systemImage: "clock.arrow.circlepath")
                     .font(.system(size: 11))
