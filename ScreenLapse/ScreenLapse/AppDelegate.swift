@@ -4,6 +4,8 @@ import SwiftUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    static private(set) weak var shared: AppDelegate?
+
     let recordingManager = RecordingManager()
 
     private var statusItem: NSStatusItem!
@@ -18,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var pendingTermination = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        AppDelegate.shared = self
         NSApp.setActivationPolicy(.accessory)
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -97,10 +100,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    // Force-close the popover (synchronous, can't be cancelled by the delegate).
-    // Used when recording begins so the popover can't appear in captured frames.
+    // Force-close the popover. NSPopover.close() is safe to call when not shown.
     func hidePopover() {
-        if popover.isShown { popover.close() }
+        popover.close()
     }
 
     private func showContextMenu() {
@@ -215,6 +217,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             if recordingManager.isRecording {
                 await recordingManager.stopRecording()
             } else {
+                hidePopover()
                 do {
                     try await recordingManager.startRecording()
                 } catch {

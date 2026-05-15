@@ -61,6 +61,13 @@ final class VideoWriter {
             AVVideoCodecKey: avCodec,
             AVVideoWidthKey: configuration.width,
             AVVideoHeightKey: configuration.height,
+            // Explicit BT.709 tagging prevents faded/washed-out colours that occur
+            // when a player guesses the wrong primaries for screen-captured content.
+            AVVideoColorPropertiesKey: [
+                AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
+                AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
+                AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
+            ],
             AVVideoCompressionPropertiesKey: [
                 AVVideoAverageBitRateKey: configuration.bitrate,
                 AVVideoProfileLevelKey: profileLevel,

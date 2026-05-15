@@ -10,6 +10,12 @@ enum CountdownOverlayController {
     static func runCountdown(seconds: Int) async {
         guard seconds > 0 else { return }
 
+        // Briefly promote to .regular so the countdown panels can become key
+        // (required for Escape to work and for the panel to be interactive).
+        // The app was in .accessory; we'll demote back when recording starts.
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             finishContinuation = continuation
 
@@ -48,6 +54,9 @@ enum CountdownOverlayController {
         autoFinishTask = nil
         for c in controllers { c.window?.close() }
         controllers.removeAll()
+
+        // Demote back to menu-bar-only — recording is about to start.
+        NSApp.setActivationPolicy(.accessory)
     }
 
     private static func finish() {

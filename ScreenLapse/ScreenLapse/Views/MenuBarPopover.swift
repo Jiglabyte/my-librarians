@@ -239,22 +239,20 @@ struct MenuBarPopover: View {
     // MARK: - Helpers
 
     private func triggerRecord() {
-        // The popover is hidden by AppDelegate's isPreparing subscription as soon
-        // as recording prep starts. SCContentFilter also excludes the app from
-        // capture, so the popover can never appear in the output. We do NOT
-        // close it synchronously here — doing so disrupts the countdown overlay
-        // panels by changing focus while they're being created.
         Task {
             if manager.isRecording {
                 await manager.stopRecording()
             } else {
+                // Close popover synchronously before the countdown so it doesn't
+                // block or overlap the countdown overlay panels.
+                AppDelegate.shared?.hidePopover()
                 try? await manager.startRecording()
             }
         }
     }
 
     private func openSettings() {
-        (NSApp.delegate as? AppDelegate)?.openSettings()
+        AppDelegate.shared?.openSettings()
     }
 
     private func formatDuration(_ value: TimeInterval) -> String {

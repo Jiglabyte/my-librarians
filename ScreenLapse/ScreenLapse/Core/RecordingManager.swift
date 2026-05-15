@@ -25,7 +25,7 @@ final class RecordingManager: ObservableObject {
 
     // MARK: - User-tunable settings
 
-    @AppStorage("ScreenLapse.quality") var qualityRaw: String = QualityPreset.high.rawValue
+    @AppStorage("ScreenLapse.quality") var qualityRaw: String = QualityPreset.medium.rawValue
     @AppStorage("ScreenLapse.codec") var codecRaw: String = CodecChoice.hevc.rawValue
     @AppStorage("ScreenLapse.resolution") var resolutionRaw: String = OutputResolution.native.rawValue
     @AppStorage("ScreenLapse.useMOV") var useMOV: Bool = false
