@@ -12,6 +12,7 @@ final class RecordingManager: ObservableObject {
 
     @Published var mode: RecordingMode = .normal(fps: 30)
     @Published var isRecording = false
+    @Published var isPaused = false
     @Published var isPreparing = false
 
     @Published var elapsedSeconds: TimeInterval = 0
@@ -290,8 +291,13 @@ final class RecordingManager: ObservableObject {
         capturedFrames = 0
         currentFileSize = 0
         isPreparing = false
+        isPaused = false
         isRecording = true
 
+        startTimers()
+    }
+
+    private func startTimers() {
         durationTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let start = self.startedAt else { return }
@@ -304,6 +310,23 @@ final class RecordingManager: ObservableObject {
                 self?.currentFileSize = self?.videoWriter?.currentFileSize ?? 0
             }
         }
+    }
+
+    func pauseRecording() {
+        guard isRecording, !isPaused else { return }
+        let now = CMClockGetTime(CMClockGetHostTimeClock())
+        videoWriter?.pause(atPTS: now)
+        isPaused = true
+        durationTimer?.invalidate(); durationTimer = nil
+        sizeTimer?.invalidate(); sizeTimer = nil
+    }
+
+    func resumeRecording() {
+        guard isRecording, isPaused else { return }
+        let now = CMClockGetTime(CMClockGetHostTimeClock())
+        videoWriter?.resume(atPTS: now)
+        isPaused = false
+        startTimers()
     }
 
     func stopRecording() async {
@@ -354,6 +377,7 @@ final class RecordingManager: ObservableObject {
         compositor = nil
         isRecording = false
         isPreparing = false
+        isPaused = false
         startedAt = nil
     }
 

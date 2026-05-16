@@ -42,6 +42,11 @@ final class VideoWriter {
     private(set) var frameCount: Int64 = 0
     private var didFinalize = false
 
+    // Pause / resume support
+    private var isPausedWriter = false
+    private var pauseStartPTS: CMTime?          // PTS when the current pause began
+    private var totalPausedDuration: CMTime = .zero  // cumulative pause time subtracted from PTS
+
     init(configuration: Configuration) throws {
         self.configuration = configuration
 
@@ -141,6 +146,28 @@ final class VideoWriter {
         }
     }
 
+    func pause(atPTS pts: CMTime) {
+        writeQueue.async { [weak self] in
+            guard let self, !self.isPausedWriter else { return }
+            self.isPausedWriter = true
+            self.pauseStartPTS = pts
+        }
+    }
+
+    func resume(atPTS pts: CMTime) {
+        writeQueue.async { [weak self] in
+            guard let self, self.isPausedWriter else { return }
+            if let start = self.pauseStartPTS, pts.isValid, start.isValid {
+                let gap = CMTimeSubtract(pts, start)
+                if gap.seconds > 0 {
+                    self.totalPausedDuration = CMTimeAdd(self.totalPausedDuration, gap)
+                }
+            }
+            self.pauseStartPTS = nil
+            self.isPausedWriter = false
+        }
+    }
+
     func start() throws {
         guard writer.status == .unknown else {
             throw WriterError.alreadyStarted
@@ -165,6 +192,7 @@ final class VideoWriter {
 
     private func doAppendVideo(_ sampleBuffer: CMSampleBuffer) {
         guard !didFinalize else { return }
+        guard !isPausedWriter else { return }
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
         let inputPTS = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
@@ -173,9 +201,8 @@ final class VideoWriter {
         let pts: CMTime
         switch configuration.mode {
         case .normal:
-            // Use the original PTS. We anchor the session at the first PTS below,
-            // so video and audio share the same timeline (no 44-hour-file bug).
-            pts = inputPTS
+            // Subtract any accumulated pause time so the file timeline has no gaps.
+            pts = CMTimeSubtract(inputPTS, totalPausedDuration)
 
         case .timeLapse(let mult):
             // SCStream may ignore minimumFrameInterval — throttle manually here.
@@ -212,7 +239,7 @@ final class VideoWriter {
     }
 
     private func doAppendAudio(_ sampleBuffer: CMSampleBuffer) {
-        guard !didFinalize, let audioInput = audioInput, hasStartedSession else { return }
+        guard !didFinalize, !isPausedWriter, let audioInput = audioInput, hasStartedSession else { return }
         guard configuration.mode.isTimeLapse == false else { return }
         guard audioInput.isReadyForMoreMediaData else { return }
 

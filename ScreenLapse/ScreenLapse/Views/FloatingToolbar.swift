@@ -57,11 +57,11 @@ struct FloatingToolbarView: View {
         HStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(Color.red.opacity(0.35))
+                    .fill((manager.isPaused ? Color.orange : Color.red).opacity(0.35))
                     .frame(width: 22, height: 22)
-                    .scaleEffect(pulseScale)
+                    .scaleEffect(manager.isPaused ? 1.0 : pulseScale)
                 Circle()
-                    .fill(Color.red)
+                    .fill(manager.isPaused ? Color.orange : Color.red)
                     .frame(width: 11, height: 11)
             }
             .onAppear {
@@ -97,6 +97,23 @@ struct FloatingToolbarView: View {
 
             Spacer(minLength: 4)
 
+            Button {
+                if manager.isPaused {
+                    manager.resumeRecording()
+                } else {
+                    manager.pauseRecording()
+                }
+            } label: {
+                Image(systemName: manager.isPaused ? "play.fill" : "pause.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(9)
+                    .background(manager.isPaused ? Color.green : Color.orange)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .help(manager.isPaused ? "Resume recording" : "Pause recording")
+
             Button(action: onStop) {
                 Image(systemName: "stop.fill")
                     .font(.system(size: 13, weight: .bold))
@@ -122,6 +139,7 @@ struct FloatingToolbarView: View {
     }
 
     private var badgeText: String {
+        if manager.isPaused { return "PAUSED" }
         switch manager.mode {
         case .normal(let fps): return "REC \(fps)"
         case .timeLapse(let mult): return "⏵⏵ \(mult)×"
@@ -129,6 +147,7 @@ struct FloatingToolbarView: View {
     }
 
     private var badgeColor: Color {
+        if manager.isPaused { return .orange.opacity(0.9) }
         switch manager.mode {
         case .normal: return .red.opacity(0.88)
         case .timeLapse: return .orange.opacity(0.9)
