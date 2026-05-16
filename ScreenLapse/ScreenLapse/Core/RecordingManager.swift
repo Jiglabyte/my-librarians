@@ -25,7 +25,7 @@ final class RecordingManager: ObservableObject {
 
     // MARK: - User-tunable settings
 
-    @AppStorage("ScreenLapse.quality") var qualityRaw: String = QualityPreset.medium.rawValue
+    @AppStorage("ScreenLapse.quality") var qualityRaw: String = QualityPreset.high.rawValue
     @AppStorage("ScreenLapse.codec") var codecRaw: String = CodecChoice.hevc.rawValue
     @AppStorage("ScreenLapse.resolution") var resolutionRaw: String = OutputResolution.native.rawValue
     @AppStorage("ScreenLapse.useMOV") var useMOV: Bool = false
@@ -182,7 +182,7 @@ final class RecordingManager: ObservableObject {
         currentOutputSize = (outWidth, outHeight)
 
         let timestamp = dateStamp()
-        let ext = useMOV ? "mov" : "mp4"
+        let ext = (useMOV || codec == .proRes) ? "mov" : "mp4"
         let modeTag = mode.isTimeLapse ? "timelapse" : "normal"
         let fileName = "ScreenLapse-\(modeTag)-\(timestamp).\(ext)"
         let outputURL = outputFolderURL.appendingPathComponent(fileName)

@@ -7,75 +7,85 @@ struct SettingsView: View {
     var body: some View {
         TabView {
             recordingTab.tabItem { Label("Recording", systemImage: "video") }
-            videoTab.tabItem { Label("Video", systemImage: "wand.and.stars") }
-            overlaysTab.tabItem { Label("Overlays", systemImage: "person.crop.square") }
-            generalTab.tabItem { Label("General", systemImage: "gear") }
-            aboutTab.tabItem { Label("About", systemImage: "info.circle") }
+            videoTab.tabItem    { Label("Video",     systemImage: "film") }
+            overlaysTab.tabItem { Label("Overlays",  systemImage: "person.crop.square") }
+            generalTab.tabItem  { Label("General",   systemImage: "gear") }
+            aboutTab.tabItem    { Label("About",     systemImage: "info.circle") }
         }
-        .frame(width: 520, height: 460)
+        .frame(width: 520, height: 480)
     }
 
-    // MARK: - Recording
+    // MARK: - Recording tab
 
     private var recordingTab: some View {
         Form {
-            Section("Output") {
+            Section("Save location") {
                 HStack {
-                    TextField("Folder", text: Binding(
+                    TextField("", text: Binding(
                         get: { manager.outputFolderURL.path },
                         set: { manager.outputFolderPath = $0 }
                     ))
                     .disabled(true)
+                    .foregroundColor(.secondary)
                     Button("Change…") { chooseOutputFolder() }
-                    Button("Reveal") { NSWorkspace.shared.activateFileViewerSelecting([manager.outputFolderURL]) }
-                }
-                Picker("Container", selection: $manager.useMOV) {
-                    Text("MP4 (.mp4)").tag(false)
-                    Text("QuickTime (.mov)").tag(true)
+                    Button("Show") {
+                        NSWorkspace.shared.activateFileViewerSelecting([manager.outputFolderURL])
+                    }
                 }
             }
 
-            Section("Audio (Normal mode only)") {
-                Toggle("Capture system audio", isOn: $manager.captureSystemAudio)
-                Toggle("Capture microphone", isOn: $manager.captureMic)
+            Section("Audio  (Normal mode only)") {
+                Toggle("System audio",  isOn: $manager.captureSystemAudio)
+                Toggle("Microphone",    isOn: $manager.captureMic)
             }
 
             Section("Cursor") {
-                Toggle("Show cursor in recording", isOn: $manager.showsCursor)
-                Toggle("Highlight mouse clicks", isOn: $manager.highlightClicks)
+                Toggle("Show cursor in recording",   isOn: $manager.showsCursor)
+                Toggle("Highlight mouse clicks",     isOn: $manager.highlightClicks)
             }
         }
     }
 
-    // MARK: - Video
+    // MARK: - Video tab
 
     private var videoTab: some View {
         Form {
-            Section("Codec") {
-                Picker("Codec", selection: Binding(
-                    get: { manager.codec },
-                    set: { manager.codec = $0 }
-                )) {
-                    ForEach(CodecChoice.allCases) { codec in
-                        Text(codec.displayName).tag(codec)
-                    }
+            // ── Format ──────────────────────────────────────────────────────
+            Section {
+                ForEach(CodecChoice.allCases) { codec in
+                    codecRow(codec)
                 }
-            }
-            Section("Quality") {
-                Picker("Preset", selection: Binding(
-                    get: { manager.quality },
-                    set: { manager.quality = $0 }
-                )) {
-                    ForEach(QualityPreset.allCases) { q in
-                        Text(q.displayName).tag(q)
-                    }
-                }
-                Text("Higher quality means larger files. Medium is a good balance.")
-                    .font(.caption)
+            } header: {
+                Text("Format")
+            } footer: {
+                Text(formatFooter)
                     .foregroundColor(.secondary)
             }
+
+            // ── Quality  (not shown for ProRes — quality is fixed by variant) ──
+            if manager.codec != .proRes {
+                Section {
+                    Picker("", selection: Binding(
+                        get: { manager.quality },
+                        set: { manager.quality = $0 }
+                    )) {
+                        ForEach(QualityPreset.allCases) { q in
+                            Text(q.settingsLabel).tag(q)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    Text(qualityFooter)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } header: {
+                    Text("Quality")
+                }
+            }
+
+            // ── Resolution ───────────────────────────────────────────────────
             Section("Resolution") {
-                Picker("Output resolution", selection: Binding(
+                Picker("", selection: Binding(
                     get: { manager.resolution },
                     set: { manager.resolution = $0 }
                 )) {
@@ -83,19 +93,67 @@ struct SettingsView: View {
                         Text(r.displayName).tag(r)
                     }
                 }
-                Text("Native records the source at its real size — best quality.")
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                Text("Native records at the screen's actual pixel size. Use 1080p or 720p to reduce file size for large displays.")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
         }
     }
 
-    // MARK: - Overlays
+    // A tappable codec card — tapping selects that codec.
+    private func codecRow(_ codec: CodecChoice) -> some View {
+        Button {
+            manager.codec = codec
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: manager.codec == codec
+                      ? "largecircle.fill.circle" : "circle")
+                    .foregroundColor(manager.codec == codec ? .accentColor : .secondary)
+                    .font(.system(size: 17))
+                    .frame(width: 22)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(codec.shortName)
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(codec.detail)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .contentShape(Rectangle())
+            .padding(.vertical, 3)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var formatFooter: String {
+        switch manager.codec {
+        case .hevc:   return "Files save as .mp4  ·  Toggle .mov below if you need QuickTime compatibility"
+        case .h264:   return "Files save as .mp4  ·  Plays on any device without transcoding"
+        case .proRes: return "Files save as .mov  ·  Container is fixed — ProRes requires QuickTime"
+        }
+    }
+
+    private var qualityFooter: String {
+        let res = manager.resolution.targetHeight ?? 1080
+        let mb = manager.quality.estimatedMBperMinute(forHeight: res)
+        let detail: String
+        switch manager.quality {
+        case .low:    detail = "Smaller files, soft on fast motion or fine text"
+        case .medium: detail = "Good balance of size and sharpness"
+        case .high:   detail = "Sharp on all content — recommended for screen recordings"
+        }
+        return "\(detail)  ·  ~\(mb) MB / min at \(res)p"
+    }
+
+    // MARK: - Overlays tab
 
     private var overlaysTab: some View {
         Form {
-            Section("Webcam Overlay") {
-                Toggle("Enable webcam picture-in-picture", isOn: $manager.captureWebcam)
+            Section("Webcam overlay") {
+                Toggle("Enable picture-in-picture", isOn: $manager.captureWebcam)
                 Picker("Corner", selection: Binding(
                     get: { manager.webcamCorner },
                     set: { manager.webcamCorner = $0 }
@@ -111,8 +169,8 @@ struct SettingsView: View {
                 }
                 .disabled(!manager.captureWebcam)
             }
-            Section("Click highlighting") {
-                Toggle("Show ripples on mouse clicks", isOn: $manager.highlightClicks)
+            Section("Click ripples") {
+                Toggle("Show ripple on every mouse click", isOn: $manager.highlightClicks)
                 if manager.highlightClicks {
                     Button("Open Accessibility Settings…") {
                         PermissionChecker.openAccessibilitySettings()
@@ -123,7 +181,7 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - General
+    // MARK: - General tab
 
     private var generalTab: some View {
         Form {
@@ -134,6 +192,12 @@ struct SettingsView: View {
                     Text("5 seconds").tag(5)
                     Text("10 seconds").tag(10)
                 }
+            }
+            Section("File format") {
+                Toggle("Save HEVC / H.264 as .mov instead of .mp4", isOn: $manager.useMOV)
+                Text("Leave off unless you specifically need .mov. ProRes always uses .mov regardless.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             Section("Permissions") {
                 permissionRow(title: "Screen Recording",
@@ -149,12 +213,9 @@ struct SettingsView: View {
                     PermissionChecker.openMicSettings()
                 }
             }
-            Section("Global Hotkey") {
-                Text("Toggle recording: ⌃⇧R")
+            Section("Global hotkey") {
+                Text("⌃⇧R  —  start / stop from anywhere")
                     .font(.system(.body, design: .monospaced))
-                Text("Hotkey is fixed for now; the keybinding is registered globally and works even when the app is in the background.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
         }
     }
@@ -167,27 +228,26 @@ struct SettingsView: View {
                 .foregroundColor(granted ? .green : .orange)
             Text(title)
             Spacer()
-            Button(granted ? "OK" : "Open Settings…") {
-                openSettings()
+            if !granted {
+                Button("Open Settings…") { openSettings() }
             }
         }
     }
 
-    // MARK: - About
+    // MARK: - About tab
 
     private var aboutTab: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("ScreenLapse")
-                .font(.title)
-                .bold()
-            Text("A free, open-source native macOS screen recorder with built-in time-lapse mode. HEVC hardware encoding produces tiny files at the same quality as QuickTime.")
-                .font(.body)
-            Text("Inspired by Tap Record. MIT License.")
+                .font(.title).bold()
+            Text("Free, native macOS screen recorder with time-lapse mode. HEVC hardware encoding keeps file sizes 5–10× smaller than QuickTime at the same visual quality.")
+            Text("MIT License · Open source")
                 .font(.caption)
                 .foregroundColor(.secondary)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding()
     }
 
     // MARK: - Helpers

@@ -37,13 +37,24 @@ enum CodecChoice: String, CaseIterable, Identifiable {
     case h264
     case proRes
     var id: String { rawValue }
-    var displayName: String {
+
+    var shortName: String {
         switch self {
-        case .hevc:   return "HEVC (H.265) — recommended"
-        case .h264:   return "H.264 — maximum compatibility"
-        case .proRes: return "ProRes 422 HQ — lossless quality (MOV, large files)"
+        case .hevc:   return "HEVC  (H.265)"
+        case .h264:   return "H.264"
+        case .proRes: return "ProRes 422 HQ"
         }
     }
+
+    var detail: String {
+        switch self {
+        case .hevc:   return "Recommended · small files, excellent quality · hardware-encoded on Apple Silicon"
+        case .h264:   return "Maximum compatibility · plays on any device · slightly larger files than HEVC"
+        case .proRes: return "Lossless quality · visually identical to your screen · large files (~350 MB/min at 1080p)"
+        }
+    }
+
+    var displayName: String { shortName }
 }
 
 enum QualityPreset: String, CaseIterable, Identifiable {
@@ -52,20 +63,31 @@ enum QualityPreset: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .low: return "Low"
+        case .low:    return "Low"
         case .medium: return "Medium"
-        case .high: return "High"
+        case .high:   return "High"
         }
     }
 
+    var settingsLabel: String {
+        switch self {
+        case .low:    return "Low  (~15 MB/min)"
+        case .medium: return "Medium  (~60 MB/min)"
+        case .high:   return "High  (~190 MB/min)"
+        }
+    }
+
+    func estimatedMBperMinute(forHeight height: Int) -> Int {
+        let mbAtHD = bitrate(for: height) / 1_000_000 * 60 / 8
+        return max(1, mbAtHD)
+    }
+
     func bitrate(for height: Int) -> Int {
-        // Wide spread so there's a clearly visible difference between presets.
-        // Low looks noticeably softer on fine text/detail; High is near-lossless.
         let base: Int
         switch self {
-        case .low:    base =  2_000_000   //  2 Mbps — visible compression on detail
-        case .medium: base =  8_000_000   //  8 Mbps — good balance, default
-        case .high:   base = 25_000_000   // 25 Mbps — near-lossless for screen content
+        case .low:    base =  2_000_000
+        case .medium: base =  8_000_000
+        case .high:   base = 25_000_000
         }
         let scale = max(1.0, Double(height) / 1080.0)
         return Int(Double(base) * scale)
