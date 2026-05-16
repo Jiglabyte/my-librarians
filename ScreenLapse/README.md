@@ -1,141 +1,59 @@
-# ScreenLapse
+#
+<p align="center">
+<img src="./ScreenLapse/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png" width="200" height="200" />
+<h1 align="center">ScreenLapse</h1>
+<h3 align="center">A lightweight and high-performance screen recorder for macOS<br><a href="./README_zh.md">[中文版本]</a><br><a href="https://lihaoyun6.github.io/screenlapse/">[Landing Page]</a>
+</p>
 
-A free, open-source native macOS screen recorder with built-in **time-lapse mode**. Inspired by Tap Record, but with HEVC hardware encoding for **massively smaller files** at the same visual quality — and time-lapse built right in.
+## Screenshot
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./img/preview_en_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="./img/preview_en.png">
+  <img alt="ScreenLapse Screenshots" src="./img/preview_en.png" width="840"/>
+</picture>
+</p>
 
-## Highlights
+## Installation and Usage
+### System Requirements:
+- macOS 12.3 and Later
 
-- **Two modes**: Normal (25 / 30 / 60 fps) and Time-lapse (5× / 10× / 15× / 30× / 60×)
-- **HEVC (H.265) hardware encoding** by default — files are 5–10× smaller than QuickTime; time-lapse files are 50–100× smaller
-- **Menu-bar app** — no Dock icon, no clutter
-- **Tap-Record-style floating toolbar** while recording so you always know where to stop
-- **System audio + microphone** (normal mode)
-- **Webcam overlay** (picture-in-picture, any corner, size slider)
-- **Click highlighting** (ripples on mouse clicks)
-- **Region / window / display** capture sources
-- **Built-in trim editor** (lossless, no re-encode)
-- **Quick share** via AirDrop / Mail / Messages
-- **Recent recordings panel**
-- **3-2-1 countdown** before recording starts
-- **Global hotkey**: ⌃⇧R toggles recording from anywhere
-- **Resolution presets**: native, 4K, 1440p, 1080p, 720p
-
-| Mode | 1 minute of capture | Output file size |
-|------|---------------------|------------------|
-| QuickTime | 1 min video | ~75 MB |
-| ScreenLapse Normal 30fps HEVC | 1 min video | ~15 MB |
-| ScreenLapse Time-lapse 15× | 4 sec video | ~1 MB |
-
-## Requirements
-
-- macOS 13.0 (Ventura) or later
-- Xcode 15+ (for building)
-- `xcodegen` (for project generation): `brew install xcodegen`
-
-## Build
+### Install:
+Download the latest installation file [here](../../releases/latest) or install via Homebrew:
 
 ```bash
-cd ScreenLapse
-./build.sh debug      # build for development
-./build.sh run        # build and launch
-./build.sh release    # optimized build into build/ScreenLapse.app
-./build.sh dmg        # build Release and create ScreenLapse-1.0.0.dmg
-./build.sh clean      # remove build artifacts
+brew install lihaoyun6/tap/screenlapse
 ```
 
-Or open in Xcode:
+### Features/Usage:
+- You can use ScreenLapse to record your screens / windows / applications / mobile devices... etc.
 
-```bash
-xcodegen generate
-open ScreenLapse.xcodeproj
-# ⌘R to run
-```
+- ScreenLapse supports driver-free audio loopback recording, mouse highlighting, screen magnifier and many more useful features.  
+- The new **"[Presenter Overlay](https://support.apple.com/guide/facetime/presenter-overlay-video-conferencing-fctm6333f4bd/mac)"** in macOS 14 was fully supported by ScreenLapse, which can overlay the camera in real time on your recording *(macOS 12/13 can only use camera floating window)*  
+- ScreenLapse is able to record `HEVC with Alpha` video format, that can contain alpha channel in the output file *(currently only iMovie and FCPX support this feature)*  
 
-## First-launch permissions
+## Q&A
+**1. Where can I reopen the main panel after closing it?**
+> Click the Dock tile or Menubar icon of ScreenLapse to reopen the main panel at any time.
 
-The first time you click **Start Recording**, macOS will ask for:
+**2. Why does ScreenLapse not a sandbox app?**
+> ScreenLapse has no plans to be uploaded to the App Store, so it does not need to be designed as a sandbox app.  
 
-- **Screen Recording** (required) — System Settings → Privacy & Security → Screen Recording
-- **Camera** (only if you enable the webcam overlay)
-- **Microphone** (only if you enable mic recording)
+**3. How to independently control the volume of system sound and sound from microphone in other video editor?**
+> ScreenLapse will merge the audio input from the microphone to the main audio track after recording by default. If you need to edit the video, you can turn off the `Record Microphone to Main Track` option in the settings panel. After turning off, the system sound and sound from microphone will be recorded into two audio tracks and can be edited independently.  
 
-If you previously denied a permission, the Settings pane will offer a button to open the right System Settings panel.
+## Donate
+<img src="./img/donate.png" width="350"/>
 
-## How to use
+## Thanks
+[Azayaka](https://github.com/Mnpn/Azayaka) @Mnpn
+> The source of inspiration and part of the code of the screen recording engine comes from the Azayaka project, and I am also one of the code contributors to this project
 
-1. Click the **record-circle icon** in the menu bar — the popover opens
-2. Pick **Normal** or **Time-lapse** at the top
-3. Choose fps or speed multiplier
-4. Pick a source (display / window / region)
-5. Click **Start Recording** — a 3-second countdown, then capture begins
-6. The **floating toolbar** appears in the corner with elapsed time, file size, and a stop button
-7. Stop with the toolbar button, the menu bar popover, or the ⌃⇧R global hotkey
-8. Open the popover and click **Recent** to trim, share, or reveal recordings
+[KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) @sindresorhus  
+> ScreenLapse uses this swift library to handle shortcut key events  
 
-Recordings save to `~/Movies/ScreenLapse/` by default. Change the folder in **Settings → Recording**.
+[SwiftLAME](https://github.com/hidden-spectrum/SwiftLAME) @Hidden Spectrum
+> ScreenLapse uses this swift library to handle MP3 output
 
-## Architecture
-
-```
-ScreenLapse/
-├── project.yml                  XcodeGen spec
-├── build.sh                     debug/release/run/dmg/clean
-└── ScreenLapse/
-    ├── ScreenLapseApp.swift     @main
-    ├── AppDelegate.swift        Status item + popover + hotkey
-    ├── Core/                    Capture, encoding, orchestration
-    │   ├── RecordingMode.swift
-    │   ├── RecordingManager.swift     ObservableObject orchestrator
-    │   ├── CaptureEngine.swift        ScreenCaptureKit SCStream
-    │   ├── CameraCapture.swift        AVCaptureSession (webcam)
-    │   ├── MicCapture.swift           AVCaptureSession (mic)
-    │   ├── ClickTracker.swift         CGEventTap → click events
-    │   ├── FrameCompositor.swift      CoreImage overlay compositor
-    │   ├── VideoWriter.swift          AVAssetWriter + HEVC, timestamp remap
-    │   └── RecentRecordings.swift
-    ├── Views/                   SwiftUI UI
-    │   ├── MenuBarPopover.swift
-    │   ├── NormalModeView.swift
-    │   ├── TimeLapseModeView.swift
-    │   ├── SourceSelectorView.swift
-    │   ├── RegionSelectorOverlay.swift  drag-to-select overlay
-    │   ├── FloatingToolbar.swift        Tap-Record-style toolbar
-    │   ├── CountdownOverlay.swift       3-2-1 countdown
-    │   ├── TrimEditorView.swift         lossless trim
-    │   ├── RecentRecordingsView.swift
-    │   └── SettingsView.swift
-    ├── Support/                 Permissions, hotkey, share helpers
-    │   ├── PermissionChecker.swift
-    │   ├── Hotkey.swift                Carbon EventHotKey
-    │   └── ShareHelper.swift           NSSharingServicePicker
-    ├── Info.plist
-    └── ScreenLapse.entitlements
-```
-
-### How time-lapse works (the trick)
-
-We tell ScreenCaptureKit to capture at a low frame rate (e.g. 2 fps for a 15× time-lapse), then rewrite each frame's presentation timestamp so the output plays back at 30 fps. The result is a real time-lapse — captured cheaply, encoded cheaply, played back fast — at a tiny fraction of the size you'd get by recording at full rate and dropping frames in post.
-
-```swift
-// SCStreamConfiguration
-config.minimumFrameInterval = CMTime(value: 1, timescale: Int32(captureFPS))
-
-// In VideoWriter.appendVideo
-let pts = CMTime(value: frameIndex, timescale: 30)  // 30 fps playback
-frameIndex += 1
-pixelBufferAdaptor.append(pixelBuffer, withPresentationTime: pts)
-```
-
-## Distribution
-
-`./build.sh dmg` produces `build/ScreenLapse-<version>.dmg` with the app and an `/Applications` symlink for drag-to-install.
-
-For App Store distribution you'd need to:
-- Turn on `com.apple.security.app-sandbox` in `ScreenLapse.entitlements`
-- Add security-scoped bookmarks for the user's chosen output folder
-- Set up signing & a provisioning profile in Xcode
-
-For Gatekeeper-friendly distribution outside the App Store, sign with your own Developer ID certificate (`codesign --sign "Developer ID Application: …"`) and notarize via `xcrun notarytool`.
-
-## License
-
-MIT — see top of repo. Free forever.
+[ChatGPT](https://chat.openai.com) @OpenAI
+> Note: Part of the code in this project was generated or refactored using ChatGPT.
