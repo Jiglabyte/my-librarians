@@ -69,14 +69,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
             .store(in: &cancellables)
 
+        recordingManager.$errorMessage
+            .compactMap { $0 }
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] msg in
+                // Only surface errors that aren't already shown by the toggleRecording path.
+                guard let self, !self.recordingManager.isRecording,
+                      !self.recordingManager.isPreparing else { return }
+                self.showError("ScreenLapse", detail: msg)
+            }
+            .store(in: &cancellables)
+
         hotkey = Hotkey(keyCode: 0x0F, modifiers: [.control, .shift]) { [weak self] in
             self?.toggleRecording()
         }
     }
 
+    // Never quit just because windows closed — we're a menu-bar-only app.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false
+    }
+
     // Wait for a clean stop before letting macOS kill us — otherwise the MP4 is corrupt.
+    // Also guard isPreparing: the countdown panels close before isRecording flips to true,
+    // and without this guard, the app terminates in that gap.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard recordingManager.isRecording, !pendingTermination else { return .terminateNow }
+        guard recordingManager.isRecording || recordingManager.isPreparing,
+              !pendingTermination else { return .terminateNow }
         pendingTermination = true
         Task { @MainActor in
             await recordingManager.stopRecording()
@@ -222,9 +242,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                     try await recordingManager.startRecording()
                 } catch {
                     NSLog("ScreenLapse: startRecording failed: \(error)")
+                    showError("Recording failed to start", detail: error.localizedDescription)
                 }
             }
         }
+    }
+
+    private func showError(_ title: String, detail: String) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = detail
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "OK")
+        NSApp.activate(ignoringOtherApps: true)
+        alert.runModal()
     }
 
     private func updateStatusItemIcon(recording: Bool) {
