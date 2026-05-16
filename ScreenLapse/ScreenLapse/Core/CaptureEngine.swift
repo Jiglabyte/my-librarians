@@ -24,6 +24,7 @@ final class CaptureEngine: NSObject {
 
     private(set) var pixelWidth: Int = 0
     private(set) var pixelHeight: Int = 0
+    private var firstFrameLogged = false
 
     static func fetchShareableContent() async throws -> SCShareableContent {
         try await SCShareableContent.excludingDesktopWindows(false,
@@ -117,17 +118,29 @@ final class CaptureEngine: NSObject {
         self.pixelWidth = config.width
         self.pixelHeight = config.height
 
+        NSLog("ScreenLapse: creating SCStream – w=%d h=%d fps=%d audio=%d",
+              config.width, config.height, captureFPS, capturesAudio ? 1 : 0)
         let stream = SCStream(filter: filter, configuration: config, delegate: self)
+        NSLog("ScreenLapse: adding screen stream output")
         try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: videoQueue)
         if capturesAudio {
-            try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: audioQueue)
+            NSLog("ScreenLapse: adding audio stream output")
+            do {
+                try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: audioQueue)
+                NSLog("ScreenLapse: audio stream output added")
+            } catch {
+                NSLog("ScreenLapse: audio stream output failed (will record without system audio): %@", error.localizedDescription)
+            }
         }
 
+        NSLog("ScreenLapse: calling stream.startCapture()")
         do {
             try await stream.startCapture()
         } catch {
+            NSLog("ScreenLapse: stream.startCapture() threw: %@", error.localizedDescription)
             throw CaptureError.streamStartFailed(error)
         }
+        NSLog("ScreenLapse: stream.startCapture() succeeded")
 
         self.stream = stream
     }
@@ -161,6 +174,10 @@ extension CaptureEngine: SCStreamOutput {
                   let status = SCFrameStatus(rawValue: statusValue),
                   status == .complete else {
                 return
+            }
+            if !firstFrameLogged {
+                firstFrameLogged = true
+                NSLog("ScreenLapse: first video frame delivered by SCStream")
             }
             onVideoFrame?(sampleBuffer)
 

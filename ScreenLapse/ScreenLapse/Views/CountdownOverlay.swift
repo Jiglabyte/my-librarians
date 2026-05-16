@@ -61,8 +61,10 @@ enum CountdownOverlayController {
         for c in controllers { c.window?.close() }
         controllers.removeAll()
 
+        NSLog("ScreenLapse: countdown complete – demoting activation policy")
         // Demote back to menu-bar-only — recording is about to start.
         NSApp.setActivationPolicy(.accessory)
+        NSLog("ScreenLapse: activation policy demoted – handing off to internalStart")
     }
 
     private static func finish() {

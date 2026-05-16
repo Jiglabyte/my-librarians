@@ -239,14 +239,17 @@ struct MenuBarPopover: View {
     // MARK: - Helpers
 
     private func triggerRecord() {
-        Task {
+        Task { @MainActor in
             if manager.isRecording {
                 await manager.stopRecording()
             } else {
-                // Close popover synchronously before the countdown so it doesn't
-                // block or overlap the countdown overlay panels.
                 AppDelegate.shared?.hidePopover()
-                try? await manager.startRecording()
+                do {
+                    try await manager.startRecording()
+                } catch {
+                    AppDelegate.shared?.showError("Recording failed to start",
+                                                   detail: error.localizedDescription)
+                }
             }
         }
     }

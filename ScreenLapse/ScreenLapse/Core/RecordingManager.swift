@@ -182,23 +182,29 @@ final class RecordingManager: ObservableObject {
     }
 
     private func internalStart(source: CaptureSource) async throws {
+        NSLog("ScreenLapse: internalStart – source=%@", source.displayName)
 
         currentRecordingMode = mode
 
         let captureFPS = mode.captureFPS
 
+        NSLog("ScreenLapse: measuring source dimensions")
         let (sourceWidth, sourceHeight, sourceFrame) = try await measureSource(source)
         currentSourceFrame = sourceFrame
+        NSLog("ScreenLapse: source is %dx%d", sourceWidth, sourceHeight)
 
         let (outWidth, outHeight) = computeOutputSize(sourceWidth: sourceWidth,
                                                       sourceHeight: sourceHeight)
         currentOutputSize = (outWidth, outHeight)
+        NSLog("ScreenLapse: output size %dx%d codec=%@ quality=%@",
+              outWidth, outHeight, codec.rawValue, qualityRaw)
 
         let timestamp = dateStamp()
         let ext = (useMOV || codec == .proRes) ? "mov" : "mp4"
         let modeTag = mode.isTimeLapse ? "timelapse" : "normal"
         let fileName = "ScreenLapse-\(modeTag)-\(timestamp).\(ext)"
         let outputURL = outputFolderURL.appendingPathComponent(fileName)
+        NSLog("ScreenLapse: output URL = %@", outputURL.path)
 
         try? FileManager.default.removeItem(at: outputURL)
 
@@ -217,8 +223,11 @@ final class RecordingManager: ObservableObject {
             mode: mode
         )
 
+        NSLog("ScreenLapse: creating VideoWriter (recordsAudio=%d)", recordsAudio ? 1 : 0)
         let writer = try VideoWriter(configuration: writerConfig)
+        NSLog("ScreenLapse: starting writer session")
         try writer.start()
+        NSLog("ScreenLapse: writer started")
         self.videoWriter = writer
 
         let compositor = FrameCompositor()
@@ -271,6 +280,7 @@ final class RecordingManager: ObservableObject {
         let frameW = outWidth
         let frameH = outHeight
 
+        NSLog("ScreenLapse: setting up capture engine")
         captureEngine = CaptureEngine()
         captureEngine.onVideoFrame = { [weak writer, weak compositor] sample in
             guard let writer, let compositor else { return }
@@ -287,16 +297,16 @@ final class RecordingManager: ObservableObject {
         captureEngine.onStop = { [weak self] err in
             if let err {
                 let msg = err.localizedDescription
-                NSLog("ScreenLapse: SCStream stopped with error: \(msg)")
+                NSLog("ScreenLapse: SCStream stopped with error: %@", msg)
                 Task { @MainActor [weak self] in
-                    // Stop recording first so isRecording is false, THEN surface the error.
                     await self?.stopRecording()
                     AppDelegate.shared?.showError("Recording stopped unexpectedly", detail: msg)
                 }
             }
         }
 
-        NSLog("ScreenLapse: calling startCapture – source=\(source.displayName) fps=\(captureFPS) audio=\(captureSystemAudioForThisRun)")
+        NSLog("ScreenLapse: calling startCapture – source=%@ fps=%d audio=%d",
+              source.displayName, captureFPS, captureSystemAudioForThisRun ? 1 : 0)
         try await captureEngine.startCapture(source: source,
                                              captureFPS: captureFPS,
                                              capturesAudio: captureSystemAudioForThisRun,

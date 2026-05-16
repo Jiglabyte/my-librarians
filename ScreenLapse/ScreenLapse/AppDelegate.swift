@@ -23,6 +23,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         AppDelegate.shared = self
         NSApp.setActivationPolicy(.accessory)
 
+        NSSetUncaughtExceptionHandler { exception in
+            NSLog("ScreenLapse CRASH – uncaught exception: %@ | reason: %@",
+                  exception.name.rawValue,
+                  exception.reason ?? "(none)")
+            NSLog("ScreenLapse CRASH callstack:\n%@",
+                  exception.callStackSymbols.joined(separator: "\n"))
+        }
+
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: "record.circle",
@@ -104,7 +112,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             popover.performClose(sender)
         } else {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
         }
     }
 
