@@ -234,19 +234,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard let button = statusItem.button else { return }
         if recording {
             pulseTimer = Timer.scheduledTimer(withTimeInterval: 0.7, repeats: true) { [weak self] _ in
-                guard let self else { return }
-                self.pulseOn.toggle()
-                let name = self.pulseOn ? "record.circle.fill" : "record.circle"
-                let img = NSImage(systemSymbolName: name, accessibilityDescription: "Recording")
-                img?.isTemplate = false
-                if let img {
-                    let tinted = NSImage(size: img.size, flipped: false) { rect in
-                        NSColor.systemRed.set()
-                        rect.fill()
-                        img.draw(in: rect, from: .zero, operation: .destinationIn, fraction: 1.0)
-                        return true
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.pulseOn.toggle()
+                    let name = self.pulseOn ? "record.circle.fill" : "record.circle"
+                    let img = NSImage(systemSymbolName: name, accessibilityDescription: "Recording")
+                    img?.isTemplate = false
+                    if let img {
+                        let tinted = NSImage(size: img.size, flipped: false) { rect in
+                            NSColor.systemRed.set()
+                            rect.fill()
+                            img.draw(in: rect, from: .zero, operation: .destinationIn, fraction: 1.0)
+                            return true
+                        }
+                        button.image = tinted
                     }
-                    button.image = tinted
                 }
             }
             pulseTimer?.fire()

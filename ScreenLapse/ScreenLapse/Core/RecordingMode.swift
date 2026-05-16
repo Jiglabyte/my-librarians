@@ -86,7 +86,7 @@ enum QualityPreset: String, CaseIterable, Identifiable {
 
     func estimatedMBperMinute(forHeight height: Int) -> Int {
         guard qualityFactor == nil else { return 0 }
-        return max(1, bitrate(for: height) / 1_000_000 * 60 / 8)
+        return Swift.max(1, bitrate(for: height) / 1_000_000 * 60 / 8)
     }
 
     func bitrate(for height: Int) -> Int {
@@ -97,7 +97,7 @@ enum QualityPreset: String, CaseIterable, Identifiable {
         case .high:   base = 25_000_000
         case .max:    base =  0           // unused — qualityFactor drives encoding
         }
-        let scale = max(1.0, Double(height) / 1080.0)
+        let scale = Swift.max(1.0, Double(height) / 1080.0)
         return Int(Double(base) * scale)
     }
 }

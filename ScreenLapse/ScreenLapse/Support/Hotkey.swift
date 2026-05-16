@@ -28,7 +28,7 @@ final class Hotkey {
         if modifiers.contains(.control)  { carbonMods |= UInt32(controlKey) }
         if modifiers.contains(.shift)    { carbonMods |= UInt32(shiftKey) }
 
-        var hotkeyID = EventHotKeyID(signature: OSType(0x534C_5053), id: 1)
+        let hotkeyID = EventHotKeyID(signature: OSType(0x534C_5053), id: 1)
         var ref: EventHotKeyRef?
         guard RegisterEventHotKey(keyCode, carbonMods, hotkeyID,
                                   GetApplicationEventTarget(), 0, &ref) == noErr,

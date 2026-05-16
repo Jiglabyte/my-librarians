@@ -167,6 +167,9 @@ extension CaptureEngine: SCStreamOutput {
         case .audio:
             onAudioFrame?(sampleBuffer)
 
+        case .microphone:
+            break
+
         @unknown default:
             break
         }
