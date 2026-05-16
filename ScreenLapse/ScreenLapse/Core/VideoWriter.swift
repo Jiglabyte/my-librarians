@@ -57,12 +57,14 @@ final class VideoWriter {
         let videoSettings: [String: Any]
         switch configuration.codec {
         case .proRes:
-            // ProRes 422 HQ: visually lossless, hardware-accelerated on Apple Silicon.
-            // Requires MOV container and no compression properties dict.
+            // ProRes 4444: stores RGBA pixel data without any YCbCr conversion,
+            // so Display P3 / wide-colour content is preserved bit-for-bit.
+            // Hardware-accelerated on Apple Silicon. Requires MOV container.
             videoSettings = [
-                AVVideoCodecKey: AVVideoCodecType.proRes422HQ,
+                AVVideoCodecKey: AVVideoCodecType.proRes4444,
                 AVVideoWidthKey: configuration.width,
-                AVVideoHeightKey: configuration.height
+                AVVideoHeightKey: configuration.height,
+                AVVideoAllowWideColorKey: true
             ]
         case .hevc, .h264:
             let avCodec: AVVideoCodecType = configuration.codec == .hevc ? .hevc : .h264
@@ -86,15 +88,15 @@ final class VideoWriter {
                 compressionProps[AVVideoAverageBitRateKey] = configuration.bitrate
             }
 
+            // AVVideoAllowWideColorKey tells the encoder to read the colour-space
+            // metadata attached to each BGRA pixel buffer by SCStream and encode
+            // accordingly (P3 on a wide-colour display, sRGB otherwise). Without
+            // this, the encoder silently clips everything to BT.709 → washed out.
             videoSettings = [
                 AVVideoCodecKey: avCodec,
                 AVVideoWidthKey: configuration.width,
                 AVVideoHeightKey: configuration.height,
-                AVVideoColorPropertiesKey: [
-                    AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
-                    AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
-                    AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
-                ],
+                AVVideoAllowWideColorKey: true,
                 AVVideoCompressionPropertiesKey: compressionProps
             ]
         }
@@ -102,10 +104,8 @@ final class VideoWriter {
         self.videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
         videoInput.expectsMediaDataInRealTime = true
 
-        // Match the pixel buffer format to what CaptureEngine produces (full-range YCbCr).
-        // The HEVC/ProRes encoder accepts this format natively on Apple Silicon.
         let pixelBufferAttrs: [String: Any] = [
-            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
             kCVPixelBufferWidthKey as String: configuration.width,
             kCVPixelBufferHeightKey as String: configuration.height
         ]

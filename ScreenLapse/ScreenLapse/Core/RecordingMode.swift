@@ -50,7 +50,7 @@ enum CodecChoice: String, CaseIterable, Identifiable {
         switch self {
         case .hevc:   return "Recommended · small files, excellent quality · hardware-encoded on Apple Silicon"
         case .h264:   return "Maximum compatibility · plays on any device · slightly larger files than HEVC"
-        case .proRes: return "Lossless quality · visually identical to your screen · large files (~350 MB/min at 1080p)"
+        case .proRes: return "True lossless · stores raw RGBA pixels, no colour conversion · large files (~500 MB/min at 1080p)"
         }
     }
 
