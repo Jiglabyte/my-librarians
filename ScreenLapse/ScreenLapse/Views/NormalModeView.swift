@@ -12,31 +12,24 @@ struct NormalModeView: View {
         VStack(alignment: .leading, spacing: 10) {
             // Frame rate
             compactLabel("Frame Rate")
-            Picker("", selection: Binding(
+            SegmentedTabs(selection: Binding(
                 get: { currentFPS },
                 set: { manager.mode = .normal(fps: $0) }
-            )) {
-                ForEach(RecordingMode.normalFPSOptions, id: \.self) { fps in
-                    Text("\(fps) fps").tag(fps)
-                }
-            }
-            .pickerStyle(.segmented)
-            .disabled(manager.isRecording || manager.isPreparing)
+            ),
+            labels: RecordingMode.normalFPSOptions.map { ("\($0) fps", $0) },
+            isDisabled: manager.isRecording || manager.isPreparing)
 
             // Quality + Resolution
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
                     compactLabel("Quality")
-                    Picker("", selection: Binding(
+                    SegmentedTabs(selection: Binding(
                         get: { manager.quality },
                         set: { manager.quality = $0 }
-                    )) {
-                        Text("Low").tag(QualityPreset.low)
-                        Text("Med").tag(QualityPreset.medium)
-                        Text("High").tag(QualityPreset.high)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
+                    ),
+                    labels: [("Low", QualityPreset.low),
+                             ("Med", QualityPreset.medium),
+                             ("High", QualityPreset.high)])
                 }
 
                 VStack(alignment: .leading, spacing: 3) {

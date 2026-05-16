@@ -65,16 +65,11 @@ struct SettingsView: View {
             // ── Quality  (not shown for ProRes — quality is fixed by variant) ──
             if manager.codec != .proRes {
                 Section {
-                    Picker("", selection: Binding(
+                    SegmentedTabs(selection: Binding(
                         get: { manager.quality },
                         set: { manager.quality = $0 }
-                    )) {
-                        ForEach(QualityPreset.allCases) { q in
-                            Text(q.settingsLabel).tag(q)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
+                    ),
+                    labels: QualityPreset.allCases.map { ($0.displayName, $0) })
                     Text(qualityFooter)
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -85,16 +80,11 @@ struct SettingsView: View {
 
             // ── Resolution ───────────────────────────────────────────────────
             Section("Resolution") {
-                Picker("", selection: Binding(
+                SegmentedTabs(selection: Binding(
                     get: { manager.resolution },
                     set: { manager.resolution = $0 }
-                )) {
-                    ForEach(OutputResolution.allCases) { r in
-                        Text(r.displayName).tag(r)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                ),
+                labels: OutputResolution.allCases.map { ($0.displayName, $0) })
                 Text("Native records at the screen's actual pixel size. Use 1080p or 720p to reduce file size for large displays.")
                     .font(.caption)
                     .foregroundColor(.secondary)

@@ -111,12 +111,9 @@ struct MenuBarPopover: View {
     // MARK: - Mode picker
 
     private var modePicker: some View {
-        Picker("", selection: $modeTabIndex) {
-            Text("Normal").tag(0)
-            Text("Time-lapse").tag(1)
-        }
-        .pickerStyle(.segmented)
-        .disabled(manager.isRecording || manager.isPreparing)
+        SegmentedTabs(selection: $modeTabIndex,
+                      labels: [("Normal", 0), ("Time-lapse", 1)],
+                      isDisabled: manager.isRecording || manager.isPreparing)
         .onChange(of: modeTabIndex) { newValue in
             manager.mode = (newValue == 0) ? .normalDefault : .timeLapseDefault
         }

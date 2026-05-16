@@ -18,16 +18,12 @@ struct TimeLapseModeView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundColor(.accentColor)
             }
-            Picker("", selection: Binding(
+            SegmentedTabs(selection: Binding(
                 get: { currentMultiplier },
                 set: { manager.mode = .timeLapse(multiplier: $0) }
-            )) {
-                ForEach(RecordingMode.timeLapseMultipliers, id: \.self) { m in
-                    Text("\(m)×").tag(m)
-                }
-            }
-            .pickerStyle(.segmented)
-            .disabled(manager.isRecording || manager.isPreparing)
+            ),
+            labels: RecordingMode.timeLapseMultipliers.map { ("\($0)×", $0) },
+            isDisabled: manager.isRecording || manager.isPreparing)
 
             // Quick estimate
             HStack(spacing: 16) {
@@ -44,16 +40,13 @@ struct TimeLapseModeView: View {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
                     compactLabel("Quality")
-                    Picker("", selection: Binding(
+                    SegmentedTabs(selection: Binding(
                         get: { manager.quality },
                         set: { manager.quality = $0 }
-                    )) {
-                        Text("Low").tag(QualityPreset.low)
-                        Text("Med").tag(QualityPreset.medium)
-                        Text("High").tag(QualityPreset.high)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
+                    ),
+                    labels: [("Low", QualityPreset.low),
+                             ("Med", QualityPreset.medium),
+                             ("High", QualityPreset.high)])
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
