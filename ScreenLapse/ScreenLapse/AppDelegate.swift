@@ -69,18 +69,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
             .store(in: &cancellables)
 
-        // Show alerts only for errors that happen during an active recording (stream stopped
-        // unexpectedly). Source-listing and permission errors are shown inside the popover.
-        recordingManager.$errorMessage
-            .compactMap { $0 }
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] msg in
-                guard let self, self.recordingManager.isRecording else { return }
-                self.showError("Recording stopped unexpectedly", detail: msg)
-            }
-            .store(in: &cancellables)
-
         hotkey = Hotkey(keyCode: 0x0F, modifiers: [.control, .shift]) { [weak self] in
             self?.toggleRecording()
         }
@@ -248,7 +236,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
-    private func showError(_ title: String, detail: String) {
+    func showError(_ title: String, detail: String) {
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = detail

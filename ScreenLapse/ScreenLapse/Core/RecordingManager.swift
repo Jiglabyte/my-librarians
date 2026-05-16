@@ -286,17 +286,22 @@ final class RecordingManager: ObservableObject {
         }
         captureEngine.onStop = { [weak self] err in
             if let err {
-                Task { @MainActor in
-                    self?.errorMessage = "Stream stopped: \(err.localizedDescription)"
+                let msg = err.localizedDescription
+                NSLog("ScreenLapse: SCStream stopped with error: \(msg)")
+                Task { @MainActor [weak self] in
+                    // Stop recording first so isRecording is false, THEN surface the error.
                     await self?.stopRecording()
+                    AppDelegate.shared?.showError("Recording stopped unexpectedly", detail: msg)
                 }
             }
         }
 
+        NSLog("ScreenLapse: calling startCapture – source=\(source.displayName) fps=\(captureFPS) audio=\(captureSystemAudioForThisRun)")
         try await captureEngine.startCapture(source: source,
                                              captureFPS: captureFPS,
                                              capturesAudio: captureSystemAudioForThisRun,
                                              showsCursor: showsCursor)
+        NSLog("ScreenLapse: startCapture succeeded – isRecording will be set true")
 
         startedAt = Date()
         elapsedSeconds = 0
