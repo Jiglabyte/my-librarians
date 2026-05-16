@@ -35,11 +35,13 @@ enum RecordingMode: Equatable, Hashable {
 enum CodecChoice: String, CaseIterable, Identifiable {
     case hevc
     case h264
+    case proRes
     var id: String { rawValue }
     var displayName: String {
         switch self {
-        case .hevc: return "HEVC (H.265) — recommended"
-        case .h264: return "H.264 — maximum compatibility"
+        case .hevc:   return "HEVC (H.265) — recommended"
+        case .h264:   return "H.264 — maximum compatibility"
+        case .proRes: return "ProRes 422 HQ — lossless quality (MOV, large files)"
         }
     }
 }

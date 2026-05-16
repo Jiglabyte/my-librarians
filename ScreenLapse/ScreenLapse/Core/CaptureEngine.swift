@@ -97,7 +97,9 @@ final class CaptureEngine: NSObject {
         config.width = max(2, baseWidth)
         config.height = max(2, baseHeight)
         config.minimumFrameInterval = CMTime(value: 1, timescale: Int32(max(1, captureFPS)))
-        config.pixelFormat = kCVPixelFormatType_32BGRA
+        // Full-range YCbCr: the encoder tags output as full range, preventing the
+        // washed-out look that BGRA → limited-range YCbCr conversion causes.
+        config.pixelFormat = kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
         config.queueDepth = 6
         config.showsCursor = showsCursor
         config.scalesToFit = false

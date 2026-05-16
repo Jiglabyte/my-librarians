@@ -44,7 +44,8 @@ final class VideoWriter {
     init(configuration: Configuration) throws {
         self.configuration = configuration
 
-        let fileType: AVFileType = configuration.containerIsMOV ? .mov : .mp4
+        // ProRes is not supported in MP4 — force MOV when that codec is selected.
+        let fileType: AVFileType = (configuration.containerIsMOV || configuration.codec == .proRes) ? .mov : .mp4
         do {
             self.writer = try AVAssetWriter(outputURL: configuration.outputURL,
                                             fileType: fileType)
@@ -52,36 +53,49 @@ final class VideoWriter {
             throw WriterError.createFailed(error)
         }
 
-        let avCodec: AVVideoCodecType = configuration.codec == .hevc ? .hevc : .h264
-        let profileLevel: String = configuration.codec == .hevc
-            ? (kVTProfileLevel_HEVC_Main_AutoLevel as String)
-            : (kVTProfileLevel_H264_High_AutoLevel as String)
-
-        let videoSettings: [String: Any] = [
-            AVVideoCodecKey: avCodec,
-            AVVideoWidthKey: configuration.width,
-            AVVideoHeightKey: configuration.height,
-            // Explicit BT.709 tagging prevents faded/washed-out colours that occur
-            // when a player guesses the wrong primaries for screen-captured content.
-            AVVideoColorPropertiesKey: [
-                AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
-                AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
-                AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
-            ],
-            AVVideoCompressionPropertiesKey: [
-                AVVideoAverageBitRateKey: configuration.bitrate,
-                AVVideoProfileLevelKey: profileLevel,
-                AVVideoExpectedSourceFrameRateKey: Int(RecordingMode.playbackFPS),
-                AVVideoMaxKeyFrameIntervalKey: Int(RecordingMode.playbackFPS) * 2,
-                AVVideoAllowFrameReorderingKey: false
+        let videoSettings: [String: Any]
+        switch configuration.codec {
+        case .proRes:
+            // ProRes 422 HQ: visually lossless, hardware-accelerated on Apple Silicon.
+            // Requires MOV container and no compression properties dict.
+            videoSettings = [
+                AVVideoCodecKey: AVVideoCodecType.proRes422HQ,
+                AVVideoWidthKey: configuration.width,
+                AVVideoHeightKey: configuration.height
             ]
-        ]
+        case .hevc, .h264:
+            let avCodec: AVVideoCodecType = configuration.codec == .hevc ? .hevc : .h264
+            let profileLevel: String = configuration.codec == .hevc
+                ? (kVTProfileLevel_HEVC_Main_AutoLevel as String)
+                : (kVTProfileLevel_H264_High_AutoLevel as String)
+            videoSettings = [
+                AVVideoCodecKey: avCodec,
+                AVVideoWidthKey: configuration.width,
+                AVVideoHeightKey: configuration.height,
+                // BT.709 tags + full-range flag: prevents washed-out look when
+                // the player guesses the wrong colour space or range.
+                AVVideoColorPropertiesKey: [
+                    AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
+                    AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
+                    AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
+                ],
+                AVVideoCompressionPropertiesKey: [
+                    AVVideoAverageBitRateKey: configuration.bitrate,
+                    AVVideoProfileLevelKey: profileLevel,
+                    AVVideoExpectedSourceFrameRateKey: Int(RecordingMode.playbackFPS),
+                    AVVideoMaxKeyFrameIntervalKey: Int(RecordingMode.playbackFPS) * 2,
+                    AVVideoAllowFrameReorderingKey: false
+                ]
+            ]
+        }
 
         self.videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
         videoInput.expectsMediaDataInRealTime = true
 
+        // Match the pixel buffer format to what CaptureEngine produces (full-range YCbCr).
+        // The HEVC/ProRes encoder accepts this format natively on Apple Silicon.
         let pixelBufferAttrs: [String: Any] = [
-            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
             kCVPixelBufferWidthKey as String: configuration.width,
             kCVPixelBufferHeightKey as String: configuration.height
         ]

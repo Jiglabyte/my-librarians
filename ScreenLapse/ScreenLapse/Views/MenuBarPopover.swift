@@ -196,7 +196,7 @@ struct MenuBarPopover: View {
     private var footer: some View {
         HStack(spacing: 6) {
             Button {
-                (NSApp.delegate as? AppDelegate)?.openRecents()
+                NSApp.sendAction(#selector(AppDelegate.openRecents(_:)), to: nil, from: nil)
             } label: {
                 Label("Recents", systemImage: "clock.arrow.circlepath")
                     .font(.system(size: 11))
@@ -252,7 +252,7 @@ struct MenuBarPopover: View {
     }
 
     private func openSettings() {
-        AppDelegate.shared?.openSettings()
+        NSApp.sendAction(#selector(AppDelegate.openSettings(_:)), to: nil, from: nil)
     }
 
     private func formatDuration(_ value: TimeInterval) -> String {

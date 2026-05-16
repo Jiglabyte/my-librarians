@@ -4,7 +4,7 @@ import SwiftUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
-    static private(set) weak var shared: AppDelegate?
+    static private(set) var shared: AppDelegate?
 
     let recordingManager = RecordingManager()
 

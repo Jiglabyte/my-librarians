@@ -12,9 +12,15 @@ enum CountdownOverlayController {
 
         // Briefly promote to .regular so the countdown panels can become key
         // (required for Escape to work and for the panel to be interactive).
-        // The app was in .accessory; we'll demote back when recording starts.
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+
+        // NSApp.activate is processed on the next main-queue turn, but
+        // withCheckedContinuation's body runs synchronously. Drain one dispatch
+        // cycle so AppKit processes the activation before we create the panels.
+        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+            DispatchQueue.main.async { c.resume() }
+        }
 
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             finishContinuation = continuation
