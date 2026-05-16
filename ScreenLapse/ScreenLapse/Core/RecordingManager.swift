@@ -313,6 +313,17 @@ final class RecordingManager: ObservableObject {
                                              showsCursor: showsCursor)
         NSLog("ScreenLapse: startCapture succeeded – isRecording will be set true")
 
+        // If the user clicked Cancel while we were waiting on startCapture
+        // (which can hang on a hidden permission dialog), stopRecording will
+        // have already flipped isPreparing back to false. Tear down what we
+        // just started and bail, so we don't resurrect a zombie recording.
+        if !isPreparing {
+            NSLog("ScreenLapse: start was cancelled by user, tearing down")
+            await captureEngine.stopCapture()
+            videoWriter = nil
+            return
+        }
+
         startedAt = Date()
         elapsedSeconds = 0
         capturedFrames = 0

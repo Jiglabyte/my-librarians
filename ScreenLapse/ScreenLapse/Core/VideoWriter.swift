@@ -259,6 +259,19 @@ final class VideoWriter {
 
         await writeQueue.asyncWait()
 
+        // If no session was ever started (recording was cancelled before the
+        // first frame ever arrived), finishWriting on AVAssetWriter can hang
+        // indefinitely on macOS 26. Use cancelWriting and bail.
+        if !hasStartedSession {
+            NSLog("ScreenLapse: finalize – no session was started, cancelling writer")
+            writer.cancelWriting()
+            try? FileManager.default.removeItem(at: configuration.outputURL)
+            throw WriterError.finalizationFailed(NSError(
+                domain: "VideoWriter",
+                code: -3,
+                userInfo: [NSLocalizedDescriptionKey: "No frames were captured"]))
+        }
+
         videoInput.markAsFinished()
         audioInput?.markAsFinished()
 
