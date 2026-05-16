@@ -19,6 +19,7 @@ final class VideoWriter {
         let width: Int
         let height: Int
         let bitrate: Int
+        let qualityFactor: Float?   // non-nil = quality-based VBR (ignores bitrate); matches QuickTime
         let codec: CodecChoice
         let containerIsMOV: Bool
         let recordsAudio: Bool
@@ -68,24 +69,33 @@ final class VideoWriter {
             let profileLevel: String = configuration.codec == .hevc
                 ? (kVTProfileLevel_HEVC_Main_AutoLevel as String)
                 : (kVTProfileLevel_H264_High_AutoLevel as String)
+
+            // Quality-based VBR (Max preset) vs fixed average bitrate.
+            // "Quality" key = kVTCompressionPropertyKey_Quality; 1.0 tells the
+            // hardware encoder to use whatever bitrate is needed — this is how
+            // QuickTime screen recording works on Apple Silicon.
+            var compressionProps: [String: Any] = [
+                AVVideoProfileLevelKey: profileLevel,
+                AVVideoExpectedSourceFrameRateKey: Int(RecordingMode.playbackFPS),
+                AVVideoMaxKeyFrameIntervalKey: Int(RecordingMode.playbackFPS) * 2,
+                AVVideoAllowFrameReorderingKey: false
+            ]
+            if let qf = configuration.qualityFactor {
+                compressionProps["Quality"] = qf
+            } else {
+                compressionProps[AVVideoAverageBitRateKey] = configuration.bitrate
+            }
+
             videoSettings = [
                 AVVideoCodecKey: avCodec,
                 AVVideoWidthKey: configuration.width,
                 AVVideoHeightKey: configuration.height,
-                // BT.709 tags + full-range flag: prevents washed-out look when
-                // the player guesses the wrong colour space or range.
                 AVVideoColorPropertiesKey: [
                     AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
                     AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
                     AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
                 ],
-                AVVideoCompressionPropertiesKey: [
-                    AVVideoAverageBitRateKey: configuration.bitrate,
-                    AVVideoProfileLevelKey: profileLevel,
-                    AVVideoExpectedSourceFrameRateKey: Int(RecordingMode.playbackFPS),
-                    AVVideoMaxKeyFrameIntervalKey: Int(RecordingMode.playbackFPS) * 2,
-                    AVVideoAllowFrameReorderingKey: false
-                ]
+                AVVideoCompressionPropertiesKey: compressionProps
             ]
         }
 

@@ -58,7 +58,7 @@ enum CodecChoice: String, CaseIterable, Identifiable {
 }
 
 enum QualityPreset: String, CaseIterable, Identifiable {
-    case low, medium, high
+    case low, medium, high, max
     var id: String { rawValue }
 
     var displayName: String {
@@ -66,6 +66,7 @@ enum QualityPreset: String, CaseIterable, Identifiable {
         case .low:    return "Low"
         case .medium: return "Medium"
         case .high:   return "High"
+        case .max:    return "Max"
         }
     }
 
@@ -74,12 +75,18 @@ enum QualityPreset: String, CaseIterable, Identifiable {
         case .low:    return "Low  (~15 MB/min)"
         case .medium: return "Medium  (~60 MB/min)"
         case .high:   return "High  (~190 MB/min)"
+        case .max:    return "Max  (QuickTime quality, variable size)"
         }
     }
 
+    // nil = quality-based VBR, no bitrate cap (QuickTime mode)
+    var qualityFactor: Float? {
+        self == .max ? 1.0 : nil
+    }
+
     func estimatedMBperMinute(forHeight height: Int) -> Int {
-        let mbAtHD = bitrate(for: height) / 1_000_000 * 60 / 8
-        return max(1, mbAtHD)
+        guard qualityFactor == nil else { return 0 }
+        return max(1, bitrate(for: height) / 1_000_000 * 60 / 8)
     }
 
     func bitrate(for height: Int) -> Int {
@@ -88,6 +95,7 @@ enum QualityPreset: String, CaseIterable, Identifiable {
         case .low:    base =  2_000_000
         case .medium: base =  8_000_000
         case .high:   base = 25_000_000
+        case .max:    base =  0           // unused — qualityFactor drives encoding
         }
         let scale = max(1.0, Double(height) / 1080.0)
         return Int(Double(base) * scale)

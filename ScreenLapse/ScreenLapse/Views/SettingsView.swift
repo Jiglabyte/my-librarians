@@ -138,14 +138,12 @@ struct SettingsView: View {
 
     private var qualityFooter: String {
         let res = manager.resolution.targetHeight ?? 1080
-        let mb = manager.quality.estimatedMBperMinute(forHeight: res)
-        let detail: String
         switch manager.quality {
-        case .low:    detail = "Smaller files, soft on fast motion or fine text"
-        case .medium: detail = "Good balance of size and sharpness"
-        case .high:   detail = "Sharp on all content — recommended for screen recordings"
+        case .low:    return "Smaller files, softer on fast motion or fine text  ·  ~15 MB/min at \(res)p"
+        case .medium: return "Good balance of size and sharpness  ·  ~60 MB/min at \(res)p"
+        case .high:   return "Sharp on all content  ·  ~190 MB/min at \(res)p"
+        case .max:    return "Quality-based VBR — same engine QuickTime uses. Bitrate adapts to content; files may be 200–600 MB/min."
         }
-        return "\(detail)  ·  ~\(mb) MB / min at \(res)p"
     }
 
     // MARK: - Overlays tab
