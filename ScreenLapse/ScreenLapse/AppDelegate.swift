@@ -69,15 +69,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
             .store(in: &cancellables)
 
+        // Show alerts only for errors that happen during an active recording (stream stopped
+        // unexpectedly). Source-listing and permission errors are shown inside the popover.
         recordingManager.$errorMessage
             .compactMap { $0 }
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] msg in
-                // Only surface errors that aren't already shown by the toggleRecording path.
-                guard let self, !self.recordingManager.isRecording,
-                      !self.recordingManager.isPreparing else { return }
-                self.showError("ScreenLapse", detail: msg)
+                guard let self, self.recordingManager.isRecording else { return }
+                self.showError("Recording stopped unexpectedly", detail: msg)
             }
             .store(in: &cancellables)
 

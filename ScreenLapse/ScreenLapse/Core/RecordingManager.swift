@@ -118,7 +118,14 @@ final class RecordingManager: ObservableObject {
                 selectedSource = list.first
             }
         } catch {
-            errorMessage = "Could not list sources: \(error.localizedDescription)"
+            let msg = error.localizedDescription
+            if msg.localizedCaseInsensitiveContains("TCC") ||
+               msg.localizedCaseInsensitiveContains("declined") ||
+               msg.localizedCaseInsensitiveContains("not authorized") {
+                errorMessage = "Screen recording permission denied. Enable ScreenLapse in System Settings → Privacy & Security → Screen Recording."
+            } else {
+                errorMessage = "Could not list sources: \(msg)"
+            }
         }
     }
 
@@ -131,9 +138,14 @@ final class RecordingManager: ObservableObject {
             return
         }
 
-        if PermissionChecker.screenRecordingStatus() != .granted {
+        // On macOS 14+, ScreenCaptureKit has its own TCC entry separate from the legacy
+        // CGPreflightScreenCaptureAccess check. Use availableSources as the ground truth:
+        // if SCShareableContent succeeded at least once, we have permission.
+        let hasPermission = PermissionChecker.screenRecordingStatus() == .granted
+                         && !availableSources.isEmpty
+        if !hasPermission {
             _ = PermissionChecker.requestScreenRecording()
-            errorMessage = "Grant screen recording in System Settings, then try again."
+            errorMessage = "Screen recording permission is required. Enable ScreenLapse in System Settings → Privacy & Security → Screen Recording, then try again."
             PermissionChecker.openScreenRecordingSettings()
             return
         }
