@@ -61,7 +61,7 @@ final class VideoWriter {
             // so Display P3 / wide-colour content is preserved bit-for-bit.
             // Hardware-accelerated on Apple Silicon. Requires MOV container.
             videoSettings = [
-                AVVideoCodecKey: AVVideoCodecType.proRes4444,
+                AVVideoCodecKey: AVVideoCodecType.appleProRes4444,
                 AVVideoWidthKey: configuration.width,
                 AVVideoHeightKey: configuration.height,
                 AVVideoAllowWideColorKey: true

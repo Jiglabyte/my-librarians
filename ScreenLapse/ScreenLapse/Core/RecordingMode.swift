@@ -42,7 +42,7 @@ enum CodecChoice: String, CaseIterable, Identifiable {
         switch self {
         case .hevc:   return "HEVC  (H.265)"
         case .h264:   return "H.264"
-        case .proRes: return "ProRes 422 HQ"
+        case .proRes: return "ProRes 4444"
         }
     }
 
