@@ -29,18 +29,19 @@ struct SForm<Content: View>: View {
     var spacing: CGFloat = 30
     var noSpacer: Bool = false
     @ViewBuilder let content: () -> Content
-    
+
     var body: some View {
-        VStack(spacing: spacing) {
-            content()
-            if !noSpacer {
-                Spacer().frame(minHeight: 0)
+        ScrollView(.vertical, showsIndicators: true) {
+            VStack(spacing: spacing) {
+                content()
+                if !noSpacer {
+                    Spacer().frame(minHeight: 0)
+                }
             }
+            .padding(.bottom, noSpacer ? 0 : -spacing)
+            .padding()
+            .frame(maxWidth: .infinity)
         }
-        .padding(.bottom, noSpacer ? 0 : -spacing)
-        .padding()
-        .frame(maxWidth: .infinity)
-        
     }
 }
 
