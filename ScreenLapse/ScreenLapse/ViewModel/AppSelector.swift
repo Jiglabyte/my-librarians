@@ -215,7 +215,8 @@ struct OptionsView: View {
     @AppStorage("recordHDR")      private var recordHDR: Bool = false
     @AppStorage("micDevice")      private var micDevice: String = "default"
     @AppStorage("enableAEC")      private var enableAEC: Bool = false
-    
+    @AppStorage("timeLapseMultiplier") private var timeLapseMultiplier: Int = 0
+
     var body: some View {
         VStack(spacing: 6) {
             HStack {
@@ -358,6 +359,32 @@ struct OptionsView: View {
                     }
                 }.padding(.trailing, isMacOS12 ? 0 : -17)
             }
+
+            // ── ScreenLapse time-lapse row (unique to our app) ──────────────
+            HStack(spacing: 8) {
+                Image(systemName: "forward.fill")
+                    .font(.subheadline)
+                    .foregroundColor(.accentColor)
+                Text("Time-Lapse")
+                    .font(.subheadline)
+                Picker("", selection: $timeLapseMultiplier) {
+                    Text("Off").tag(0)
+                    Text("5×").tag(5)
+                    Text("10×").tag(10)
+                    Text("15×").tag(15)
+                    Text("30×").tag(30)
+                    Text("60×").tag(60)
+                }
+                .buttonStyle(.borderless)
+                .frame(width: 100)
+                if timeLapseMultiplier > 0 {
+                    Text("Audio disabled · plays back at 30 fps")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.top, 2)
         }
     }
 }
