@@ -169,15 +169,6 @@ struct OutputView: View {
     @AppStorage("saveDirectory")         private var saveDirectory: String?
     @AppStorage("timeLapseMultiplier")   private var timeLapseMultiplier: Int = 0
 
-    private let timeLapseOptions: [(label: String, value: Int)] = [
-        ("Off",  0),
-        ("5×",   5),
-        ("10×",  10),
-        ("15×",  15),
-        ("30×",  30),
-        ("60×",  60),
-    ]
-
     var body: some View {
         SForm(spacing: 30) {
             SGroupBox(label: "Audio") {
@@ -228,9 +219,12 @@ struct OutputView: View {
             }
             SGroupBox(label: "Time-Lapse") {
                 SPicker("Speed", selection: $timeLapseMultiplier) {
-                    ForEach(timeLapseOptions, id: \.value) { opt in
-                        Text(opt.label).tag(opt.value)
-                    }
+                    Text("Off").tag(0)
+                    Text("5×").tag(5)
+                    Text("10×").tag(10)
+                    Text("15×").tag(15)
+                    Text("30×").tag(30)
+                    Text("60×").tag(60)
                 }
                 if timeLapseMultiplier > 0 {
                     SDivider()
