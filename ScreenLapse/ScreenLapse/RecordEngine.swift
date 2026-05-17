@@ -144,6 +144,10 @@ extension AppDelegate {
         // Sync the static multiplier from user defaults so the frame callback can read it safely.
         SCContext.timeLapseMultiplier = fastStart ? 0 : ud.integer(forKey: "timeLapseMultiplier")
         SCContext.timeLapseFrameIndex = 0
+        // Reset the frame dedup queue — stale real-time PTSes from a prior normal recording
+        // would be >> any synthetic time-lapse PTS (which starts at 0), causing every frame
+        // to be incorrectly skipped as a duplicate.
+        frameQueue = FixedLengthArray<CMTime>(maxLength: 20)
 
         let audioOnly = SCContext.streamType == .systemaudio
         
@@ -223,12 +227,12 @@ extension AppDelegate {
         }
         
 
-        // In time-lapse mode, capture at a low fps determined by the multiplier.
-        // e.g. 15× → capture 2 fps, remap PTS to play back at 30 fps → 15× speed.
+        // In time-lapse mode, capture one frame every (mult/30) seconds.
+        // e.g. 15× → 1 frame per 0.5 s (2 fps), PTS remapped to 30 fps playback → 15× speed.
+        // e.g. 60× → 1 frame per 2 s (0.5 fps), PTS remapped to 30 fps playback → 60× speed.
         let timeLapseMult = SCContext.timeLapseMultiplier
         if !audioOnly && timeLapseMult > 0 {
-            let captureFPS = max(1, 30 / timeLapseMult)
-            conf.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(captureFPS))
+            conf.minimumFrameInterval = CMTime(value: CMTimeValue(timeLapseMult), timescale: 30)
         } else {
             conf.minimumFrameInterval = CMTime(value: 1, timescale: audioOnly ? CMTimeScale.max : (frameRate >= 60 ? 0 : CMTimeScale(frameRate)))
         }
