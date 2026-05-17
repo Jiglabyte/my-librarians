@@ -23,6 +23,7 @@ struct ContentView: View {
     @AppStorage("micDevice") private var micDevice: String = "default"
     @AppStorage("showOnDock") private var showOnDock: Bool = true
     @AppStorage("showMenubar") private var showMenubar: Bool = false
+    @AppStorage("timeLapseMultiplier") private var timeLapseMultiplier: Int = 0
 
     var appDelegate = AppDelegate.shared
     
@@ -45,6 +46,7 @@ struct ContentView: View {
                         }
                     }.opacity(0.5)
                 }.cornerRadius(14)
+                VStack(spacing: 6) {
                 HStack {
                     if !fromStatusBar { Spacer() }
                     if #available(macOS 13, *) {
@@ -236,6 +238,47 @@ struct ContentView: View {
                         }).buttonStyle(.plain)
                     }
                     if !fromStatusBar { Spacer() }
+                }
+
+                // ── Time-Lapse selector (ScreenLapse signature feature) ──
+                HStack(spacing: 6) {
+                    if !fromStatusBar { Spacer() }
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(.accentColor)
+                    Text("Time-Lapse")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .padding(.trailing, 4)
+                    ForEach([0, 5, 10, 15, 30, 60], id: \.self) { mult in
+                        Button {
+                            timeLapseMultiplier = mult
+                        } label: {
+                            Text(mult == 0 ? "Off" : "\(mult)×")
+                                .font(.system(size: 11,
+                                              weight: timeLapseMultiplier == mult ? .semibold : .regular))
+                                .frame(minWidth: 26)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 5)
+                                        .fill(timeLapseMultiplier == mult
+                                              ? Color.accentColor
+                                              : Color.primary.opacity(0.07))
+                                )
+                                .foregroundColor(timeLapseMultiplier == mult ? .white : .primary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if timeLapseMultiplier > 0 {
+                        Text("· audio off · 30 fps playback")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 4)
+                    }
+                    if !fromStatusBar { Spacer() }
+                }
+                .padding(.bottom, 4)
                 }.padding(.vertical, 10).padding(.horizontal, fromStatusBar ? 10 : 20)
             }
             if !fromStatusBar {
