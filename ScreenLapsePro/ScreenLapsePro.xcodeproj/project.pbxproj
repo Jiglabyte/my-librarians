@@ -1,0 +1,389 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		39A97B56FF7D48D3985F241F /* ScreenLapseProApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EAA04C6E29B4F60AB62B1EB /* ScreenLapseProApp.swift */; };
+		AB0D75458944448F8B88926A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6382A742E7D246DB9DE970EA /* AppDelegate.swift */; };
+		9563A54F78654541938778E1 /* RecordingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52C53D374274E188B5834D6 /* RecordingManager.swift */; };
+		156A55EAF7B041CDAFFFB5F9 /* CaptureEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42AA7977424544A3863C9898 /* CaptureEngine.swift */; };
+		748BF1CF088E4B239AB9F6D9 /* VideoWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B65D9535FFCB4CE88C243D7B /* VideoWriter.swift */; };
+		BD3715AE9BBC4E49A0E7C9F4 /* PopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE208B00FDD4721AC88AAA6 /* PopoverView.swift */; };
+		C3C00C93A879465CB1BFCB18 /* ToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC96240AD760455DB5231EE8 /* ToolbarView.swift */; };
+		76C6CB8408FA4A2D90565C15 /* SourcePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10DC707FAD654708949D874F /* SourcePickerView.swift */; };
+		261C2F30D35B4C8BB78C53A7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B391564D47144133ADBAD5AC /* SettingsView.swift */; };
+		DC7962B6086A4DEFB0EDE9F6 /* Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7402688652A42E78BE3DF8E /* Permissions.swift */; };
+		C709FB258E3D481280F87AF1 /* Prefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0CB8CE739A4F719788352F /* Prefs.swift */; };
+		8C0A81DAE2484EFAA88C45D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E8E307275D4042BF8C00D74C /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		2EAA04C6E29B4F60AB62B1EB /* ScreenLapseProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenLapseProApp.swift; sourceTree = "<group>"; };
+		6382A742E7D246DB9DE970EA /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		F52C53D374274E188B5834D6 /* RecordingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingManager.swift; sourceTree = "<group>"; };
+		42AA7977424544A3863C9898 /* CaptureEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureEngine.swift; sourceTree = "<group>"; };
+		B65D9535FFCB4CE88C243D7B /* VideoWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoWriter.swift; sourceTree = "<group>"; };
+		7CE208B00FDD4721AC88AAA6 /* PopoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverView.swift; sourceTree = "<group>"; };
+		AC96240AD760455DB5231EE8 /* ToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarView.swift; sourceTree = "<group>"; };
+		10DC707FAD654708949D874F /* SourcePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcePickerView.swift; sourceTree = "<group>"; };
+		B391564D47144133ADBAD5AC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		C7402688652A42E78BE3DF8E /* Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Permissions.swift; sourceTree = "<group>"; };
+		FD0CB8CE739A4F719788352F /* Prefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Prefs.swift; sourceTree = "<group>"; };
+		E8E307275D4042BF8C00D74C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		0BB954F0CFF74E7F8EFF2A62 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		E8D30EEA811A464390693198 /* ScreenLapsePro.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ScreenLapsePro.entitlements; sourceTree = "<group>"; };
+		7BF1CDEB229F48459237B913 /* ScreenLapsePro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScreenLapsePro.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		7EA29A4798584E6ABD4501E2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5F22103FDE2D4B718814122E = {
+			isa = PBXGroup;
+			children = (
+				A6E34AAADE2D4B718814122F /* ScreenLapsePro */,
+				9EE2324DD4F249B2B4658053 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9EE2324DD4F249B2B4658053 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7BF1CDEB229F48459237B913 /* ScreenLapsePro.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A6E34AAADE2D4B718814122F /* ScreenLapsePro */ = {
+			isa = PBXGroup;
+			children = (
+				0BB954F0CFF74E7F8EFF2A62 /* Info.plist */,
+				E8D30EEA811A464390693198 /* ScreenLapsePro.entitlements */,
+				E8E307275D4042BF8C00D74C /* Assets.xcassets */,
+				3F135988AAF7463DA59B0BF0 /* App */,
+				A6E31DAFC9DF48A8984F47DB /* Core */,
+				C2639F47C0A34BDDBF8D9990 /* Views */,
+				28A614B302C24131870A6E0C /* Support */,
+			);
+			path = ScreenLapsePro;
+			sourceTree = "<group>";
+		};
+		3F135988AAF7463DA59B0BF0 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				2EAA04C6E29B4F60AB62B1EB /* ScreenLapseProApp.swift */,
+				6382A742E7D246DB9DE970EA /* AppDelegate.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A6E31DAFC9DF48A8984F47DB /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				F52C53D374274E188B5834D6 /* RecordingManager.swift */,
+				42AA7977424544A3863C9898 /* CaptureEngine.swift */,
+				B65D9535FFCB4CE88C243D7B /* VideoWriter.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		C2639F47C0A34BDDBF8D9990 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				7CE208B00FDD4721AC88AAA6 /* PopoverView.swift */,
+				AC96240AD760455DB5231EE8 /* ToolbarView.swift */,
+				10DC707FAD654708949D874F /* SourcePickerView.swift */,
+				B391564D47144133ADBAD5AC /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		28A614B302C24131870A6E0C /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				C7402688652A42E78BE3DF8E /* Permissions.swift */,
+				FD0CB8CE739A4F719788352F /* Prefs.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7C13C4E643704188AD585110 /* ScreenLapsePro */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4E020CA0A43A401E87A78F04 /* Build configuration list for PBXNativeTarget "ScreenLapsePro" */;
+			buildPhases = (
+				DD42B87518F843B39E71273D /* Sources */,
+				7EA29A4798584E6ABD4501E2 /* Frameworks */,
+				954635C7D6EB4E3DACEBD584 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ScreenLapsePro;
+			packageProductDependencies = (
+			);
+			productName = ScreenLapsePro;
+			productReference = 7BF1CDEB229F48459237B913 /* ScreenLapsePro.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B611323FE92344B492EB94D8 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1510;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					7C13C4E643704188AD585110 = {
+						CreatedOnToolsVersion = 15.1;
+					};
+				};
+			};
+			buildConfigurationList = 0D1E06287EC240E4974270FC /* Build configuration list for PBXProject "ScreenLapsePro" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 5F22103FDE2D4B718814122E;
+			packageReferences = (
+			);
+			productRefGroup = 9EE2324DD4F249B2B4658053 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7C13C4E643704188AD585110 /* ScreenLapsePro */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		954635C7D6EB4E3DACEBD584 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8C0A81DAE2484EFAA88C45D0 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		DD42B87518F843B39E71273D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				39A97B56FF7D48D3985F241F /* ScreenLapseProApp.swift in Sources */,
+				AB0D75458944448F8B88926A /* AppDelegate.swift in Sources */,
+				9563A54F78654541938778E1 /* RecordingManager.swift in Sources */,
+				156A55EAF7B041CDAFFFB5F9 /* CaptureEngine.swift in Sources */,
+				748BF1CF088E4B239AB9F6D9 /* VideoWriter.swift in Sources */,
+				BD3715AE9BBC4E49A0E7C9F4 /* PopoverView.swift in Sources */,
+				C3C00C93A879465CB1BFCB18 /* ToolbarView.swift in Sources */,
+				76C6CB8408FA4A2D90565C15 /* SourcePickerView.swift in Sources */,
+				261C2F30D35B4C8BB78C53A7 /* SettingsView.swift in Sources */,
+				DC7962B6086A4DEFB0EDE9F6 /* Permissions.swift in Sources */,
+				C709FB258E3D481280F87AF1 /* Prefs.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A7E4C88FD39A4708B7192BE8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		67084B5EB41B45D2B87B00D7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		30D2D73A018A436482ACE006 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ScreenLapsePro/ScreenLapsePro.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScreenLapsePro/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "ScreenLapse Pro uses the camera for optional webcam overlay.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2025 ScreenLapse. All rights reserved.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ScreenLapse Pro uses the microphone to record your voice.";
+				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "ScreenLapse Pro needs screen recording access to capture your screen.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.screenlapse.pro;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		F53E3C17010949F9A4D41E0F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ScreenLapsePro/ScreenLapsePro.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScreenLapsePro/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "ScreenLapse Pro uses the camera for optional webcam overlay.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2025 ScreenLapse. All rights reserved.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ScreenLapse Pro uses the microphone to record your voice.";
+				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "ScreenLapse Pro needs screen recording access to capture your screen.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.screenlapse.pro;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0D1E06287EC240E4974270FC /* Build configuration list for PBXProject "ScreenLapsePro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A7E4C88FD39A4708B7192BE8 /* Debug */,
+				67084B5EB41B45D2B87B00D7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4E020CA0A43A401E87A78F04 /* Build configuration list for PBXNativeTarget "ScreenLapsePro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				30D2D73A018A436482ACE006 /* Debug */,
+				F53E3C17010949F9A4D41E0F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = B611323FE92344B492EB94D8 /* Project object */;
+}

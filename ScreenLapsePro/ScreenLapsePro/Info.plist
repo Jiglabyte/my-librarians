@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>ScreenLapse Pro</string>
+	<key>CFBundleDisplayName</key>
+	<string>ScreenLapse Pro</string>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>ScreenLapse Pro needs screen recording access to capture your screen.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ScreenLapse Pro uses the camera for the optional webcam overlay.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ScreenLapse Pro uses the microphone to record your voice during recordings.</string>
+</dict>
+</plist>
