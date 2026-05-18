@@ -24,7 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: Recording state
 
     private weak var recordingManager: RecordingManager?
-    private var statusTimer:       Timer?
+    private var statusTimer:        Timer?
     private var recordingStartDate: Date?
 
     // MARK: - Application Lifecycle
@@ -47,17 +47,64 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.image = img
             button.action = #selector(handleStatusItemClick)
             button.target = self
-            button.sendAction(on: [.leftMouseUp])
+            // Receive both left and right clicks
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
     }
 
     @objc private func handleStatusItemClick(_ sender: NSStatusBarButton) {
+        // Right-click → context menu; left-click → popover
+        if NSApp.currentEvent?.type == .rightMouseUp {
+            showContextMenu()
+            return
+        }
         if let popover, popover.isShown {
             popover.performClose(sender)
         } else {
             showPopover(sender)
         }
     }
+
+    // MARK: - Right-Click Context Menu
+
+    private func showContextMenu() {
+        let menu = NSMenu()
+
+        let header = NSMenuItem(title: "ScreenLapse Pro", action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        menu.addItem(header)
+        menu.addItem(.separator())
+
+        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettingsFromMenu), keyEquivalent: ",")
+        settingsItem.target = self
+        menu.addItem(settingsItem)
+
+        menu.addItem(.separator())
+
+        let quitItem = NSMenuItem(title: "Quit ScreenLapse Pro", action: #selector(quitApp), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
+
+        // Temporarily assign the menu so NSStatusItem shows it on click
+        statusItem?.menu = menu
+        statusItem?.button?.performClick(nil)
+        // Remove after display so left-click continues to show the popover
+        statusItem?.menu = nil
+    }
+
+    @objc private func openSettingsFromMenu() {
+        // Open popover then trigger settings sheet via notification
+        if let button = statusItem?.button {
+            showPopover(button)
+        }
+        NotificationCenter.default.post(name: .openSettingsRequest, object: nil)
+    }
+
+    @objc private func quitApp() {
+        NSApp.terminate(nil)
+    }
+
+    // MARK: - Popover
 
     private func showPopover(_ sender: NSStatusBarButton) {
         let pop = makePopoverIfNeeded()
@@ -105,7 +152,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if Prefs.showStatusBarTimer {
             startStatusBarTimer()
         } else {
-            // Just tint the icon red
             if let button = statusItem?.button {
                 let img = NSImage(systemSymbolName: "record.circle.fill",
                                   accessibilityDescription: "Recording")
@@ -131,8 +177,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func startStatusBarTimer() {
         updateStatusBarTimer()
-        // Use Timer(timeInterval:) + RunLoop.add(.common) so the timer fires even
-        // when the run loop is in tracking mode (e.g. while a menu is open).
         let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.updateStatusBarTimer() }
         }
@@ -144,7 +188,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusTimer?.invalidate()
         statusTimer = nil
 
-        // Restore icon
         if let button = statusItem?.button {
             button.title = ""
             button.image = NSImage(systemSymbolName: "record.circle",
@@ -158,10 +201,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let start = recordingStartDate,
               let button = statusItem?.button else { return }
         let elapsed = Int(Date().timeIntervalSince(start))
-        let m = elapsed / 60
-        let s = elapsed % 60
         button.image = nil
-        button.title = String(format: "● %02d:%02d", m, s)
+        button.title = String(format: "● %02d:%02d", elapsed / 60, elapsed % 60)
         button.contentTintColor = .systemRed
     }
 
@@ -176,8 +217,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func hideToolbarPanel() {
         toolbarPanel?.orderOut(nil)
-        toolbarPanel   = nil
-        toolbarHostVC  = nil
+        toolbarPanel  = nil
+        toolbarHostVC = nil
     }
 
     private func makeToolbarPanel() -> NSPanel {
@@ -201,9 +242,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         })
 
         let hostVC = NSHostingController(rootView: toolbarView)
-        hostVC.view.wantsLayer         = true
+        hostVC.view.wantsLayer             = true
         hostVC.view.layer?.backgroundColor = NSColor.clear.cgColor
-        hostVC.sizingOptions           = []
+        hostVC.sizingOptions               = []
 
         panel.contentViewController = hostVC
         toolbarHostVC = hostVC
@@ -220,4 +261,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                               width: w, height: h),
                        display: false)
     }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let openSettingsRequest = Notification.Name("ScreenLapsePro.OpenSettings")
 }

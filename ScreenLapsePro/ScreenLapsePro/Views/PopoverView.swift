@@ -47,6 +47,9 @@ struct PopoverView: View {
             .frame(width: 320)
             .background(.ultraThinMaterial)
             .onReceive(manager.$error) { showError = $0 != nil }
+            .onReceive(NotificationCenter.default.publisher(for: .openSettingsRequest)) { _ in
+                showSettings = true
+            }
 
             // Countdown overlay
             if let remaining = manager.countdownRemaining {
@@ -78,7 +81,34 @@ struct PopoverView: View {
             if showError, let err = manager.error {
                 errorBanner(err)
             }
+
+            quitFooter
         }
+    }
+
+    // MARK: - Quit Footer
+
+    private var quitFooter: some View {
+        HStack {
+            Spacer()
+            Button {
+                NSApp.terminate(nil)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "power")
+                        .font(.system(size: 10))
+                    Text("Quit")
+                        .font(.system(size: 11))
+                }
+                .foregroundStyle(.tertiary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+            }
+            .buttonStyle(.plain)
+            .help("Quit ScreenLapse Pro")
+        }
+        .padding(.horizontal, 10)
+        .padding(.bottom, 6)
     }
 
     // MARK: - Header
