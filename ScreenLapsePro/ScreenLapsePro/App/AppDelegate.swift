@@ -8,6 +8,7 @@ import ScreenCaptureKit
 
 // MARK: - AppDelegate
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: Status Item
