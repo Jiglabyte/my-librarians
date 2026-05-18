@@ -68,7 +68,9 @@ final class RecordingManager: ObservableObject {
 
     private let captureEngine = CaptureEngine()
     private let micCapturer   = MicrophoneCapturer()
-    private var videoWriter:  VideoWriter?
+    // nonisolated(unsafe): access is manually serialized — set on @MainActor before capture
+    // starts, cleared only after writerQueue is fully drained in stopRecording().
+    nonisolated(unsafe) private var videoWriter: VideoWriter?
     private var elapsedTimer: Timer?
     private var autoStopTimer: Timer?
     private var recordingTask: Task<Void, Never>?
@@ -353,3 +355,10 @@ extension RecordingManager: MicrophoneCapturerDelegate {
         writerQueue.async { [weak self] in self?.videoWriter?.appendMicAudio(buf) }
     }
 }
+
+// MARK: - CMSampleBuffer Sendable
+
+// CMSampleBuffer is a Core Foundation reference type that is internally thread-safe.
+// This retroactive conformance lets us pass buffers across actor/queue boundaries
+// without wrapping them, matching the standard pattern used in AVFoundation pipelines.
+extension CMSampleBuffer: @unchecked @retroactive Sendable {}

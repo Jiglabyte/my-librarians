@@ -105,6 +105,10 @@ final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         case .audio:
             delegate?.captureEngine(self, didOutputAudioFrame: sampleBuffer)
 
+        case .microphone:
+            // macOS 15+: we capture mic via AVCaptureSession, not SCStream
+            break
+
         @unknown default:
             break
         }
