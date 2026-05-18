@@ -18,40 +18,44 @@ struct PopoverView: View {
 
     @StateObject private var manager = RecordingManager()
 
-    // Mode selection
     @State private var selectedSegment:    ModeSegment = .normal
     @State private var selectedFPS:        Int         = 30
     @State private var selectedMultiplier: Int         = 15
 
-    // Source selection
     @State private var activeFilter:   SCContentFilter?
     @State private var sourceLabel:    String = ""
 
-    // Sheet / popover presentation
     @State private var showSourcePicker = false
     @State private var showSettings     = false
+    @State private var showError        = false
 
-    // Error banner
-    @State private var showError = false
+    @AppStorage(PrefsKey.recordSystemAudio) private var recordSystemAudio = false
+    @AppStorage(PrefsKey.recordMicrophone)  private var recordMicrophone  = false
 
     private let multiplierOptions: [Int] = [5, 10, 15, 30, 60]
     private let fpsOptions:        [Int] = [24, 30, 60]
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Guard: permission check
-            if !checkScreenRecordingPermission() {
-                PermissionView()
-                    .padding(12)
-            } else {
-                mainContent
+        ZStack {
+            VStack(spacing: 0) {
+                if !checkScreenRecordingPermission() {
+                    PermissionView().padding(12)
+                } else {
+                    mainContent
+                }
+            }
+            .frame(width: 320)
+            .background(.ultraThinMaterial)
+            .onReceive(manager.$error) { showError = $0 != nil }
+
+            // Countdown overlay
+            if let remaining = manager.countdownRemaining {
+                countdownOverlay(remaining)
+                    .frame(width: 320)
+                    .transition(.opacity)
             }
         }
-        .frame(width: 320)
-        .background(.ultraThinMaterial)
-        .onReceive(manager.$error) { err in
-            showError = err != nil
-        }
+        .animation(.easeInOut(duration: 0.2), value: manager.countdownRemaining)
     }
 
     // MARK: - Main Content
@@ -63,6 +67,8 @@ struct PopoverView: View {
             modeSection
             Divider().opacity(0.4)
             sourceSection
+            Divider().opacity(0.4)
+            audioRow
             Divider().opacity(0.4)
             statusOrFolderRow
             recordButton
@@ -87,9 +93,7 @@ struct PopoverView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button {
-                showSettings = true
-            } label: {
+            Button { showSettings = true } label: {
                 Image(systemName: "gearshape")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
@@ -99,9 +103,7 @@ struct PopoverView: View {
             }
             .buttonStyle(.plain)
             .help("Settings")
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
-            }
+            .sheet(isPresented: $showSettings) { SettingsView() }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 13)
@@ -112,9 +114,7 @@ struct PopoverView: View {
     private var modeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Picker("", selection: $selectedSegment) {
-                ForEach(ModeSegment.allCases, id: \.self) { seg in
-                    Text(seg.rawValue).tag(seg)
-                }
+                ForEach(ModeSegment.allCases, id: \.self) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -140,9 +140,7 @@ struct PopoverView: View {
                 .foregroundStyle(.secondary)
             Spacer()
             Picker("", selection: $selectedFPS) {
-                ForEach(fpsOptions, id: \.self) { fps in
-                    Text("\(fps) fps").tag(fps)
-                }
+                ForEach(fpsOptions, id: \.self) { Text("\($0) fps").tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -154,17 +152,15 @@ struct PopoverView: View {
     private var timeLapseModeOptions: some View {
         HStack(spacing: 5) {
             ForEach(multiplierOptions, id: \.self) { mult in
-                let isSelected = mult == selectedMultiplier
-                Button {
-                    selectedMultiplier = mult
-                } label: {
+                let sel = mult == selectedMultiplier
+                Button { selectedMultiplier = mult } label: {
                     Text("\(mult)x")
-                        .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                        .font(.system(size: 12, weight: sel ? .semibold : .regular))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
                         .frame(maxWidth: .infinity)
-                        .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.15))
-                        .foregroundStyle(isSelected ? Color.white : Color.primary)
+                        .background(sel ? Color.accentColor : Color.secondary.opacity(0.15))
+                        .foregroundStyle(sel ? Color.white : Color.primary)
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -183,8 +179,8 @@ struct PopoverView: View {
                 .tracking(0.6)
 
             HStack(spacing: 8) {
-                sourceButton(icon: "display",   label: "Display",  tag: "display")
-                sourceButton(icon: "macwindow", label: "Window",   tag: "window")
+                sourceButton(icon: "display",   label: "Display")
+                sourceButton(icon: "macwindow", label: "Window")
             }
 
             if !sourceLabel.isEmpty {
@@ -205,29 +201,19 @@ struct PopoverView: View {
         .padding(.vertical, 12)
         .sheet(isPresented: $showSourcePicker) {
             SourcePickerView { filter, label in
-                activeFilter = filter
-                sourceLabel  = label
+                activeFilter     = filter
+                sourceLabel      = label
                 showSourcePicker = false
-                // Auto-start if the user picked while already wanting to record
             }
         }
     }
 
     @ViewBuilder
-    private func sourceButton(icon: String, label: String, tag: String) -> some View {
-        let isActive = !sourceLabel.isEmpty && sourceLabel.localizedCaseInsensitiveContains(
-            tag == "display" ? "Display" : ""
-        )
-        _ = isActive  // suppress unused warning; styling handled uniformly below
-
-        Button {
-            showSourcePicker = true
-        } label: {
+    private func sourceButton(icon: String, label: String) -> some View {
+        Button { showSourcePicker = true } label: {
             HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12))
-                Text(label)
-                    .font(.system(size: 12))
+                Image(systemName: icon).font(.system(size: 12))
+                Text(label).font(.system(size: 12))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
@@ -237,6 +223,48 @@ struct PopoverView: View {
         }
         .buttonStyle(.plain)
         .disabled(manager.isRecording)
+    }
+
+    // MARK: - Audio Row
+
+    private var audioRow: some View {
+        HStack(spacing: 0) {
+            audioChip(
+                icon: "speaker.wave.2.fill",
+                label: "System Audio",
+                active: recordSystemAudio
+            ) { recordSystemAudio.toggle() }
+
+            Divider().frame(height: 28).opacity(0.3)
+
+            audioChip(
+                icon: "mic.fill",
+                label: "Microphone",
+                active: recordMicrophone
+            ) { recordMicrophone.toggle() }
+        }
+        .disabled(manager.isRecording)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    @ViewBuilder
+    private func audioChip(icon: String, label: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 11))
+                    .foregroundStyle(active ? Color.accentColor : Color.secondary)
+                Text(label)
+                    .font(.system(size: 12, weight: active ? .medium : .regular))
+                    .foregroundStyle(active ? Color.primary : Color.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .background(active ? Color.accentColor.opacity(0.12) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Status / Folder Row
@@ -255,17 +283,24 @@ struct PopoverView: View {
 
     private var recordingStatusRow: some View {
         HStack(spacing: 8) {
-            // Animated red dot
             RecordingDot()
-
             Text(elapsedFormatted)
                 .font(.system(size: 12, weight: .semibold, design: .monospaced))
-
             Text(manager.fileSize)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
-
             Spacer()
+            // Audio indicators while recording
+            if recordSystemAudio {
+                Image(systemName: "speaker.wave.2.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.green)
+            }
+            if recordMicrophone {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.green)
+            }
         }
     }
 
@@ -317,7 +352,7 @@ struct PopoverView: View {
                 .lineLimit(3)
             Spacer()
             Button {
-                showError = false
+                showError  = false
                 manager.error = nil
             } label: {
                 Image(systemName: "xmark")
@@ -331,6 +366,30 @@ struct PopoverView: View {
         .background(Color.orange.opacity(0.12))
     }
 
+    // MARK: - Countdown Overlay
+
+    @ViewBuilder
+    private func countdownOverlay(_ seconds: Int) -> some View {
+        ZStack {
+            Color.black.opacity(0.6)
+                .clipShape(RoundedRectangle(cornerRadius: 0))
+
+            VStack(spacing: 10) {
+                Text("\(seconds)")
+                    .font(.system(size: 80, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .contentTransition(.numericText())
+                    .animation(.spring(response: 0.3), value: seconds)
+
+                Text("Recording starts…")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.75))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea()
+    }
+
     // MARK: - Actions
 
     private func startOrStop() {
@@ -338,7 +397,6 @@ struct PopoverView: View {
             Task { await manager.stopRecording() }
         } else {
             if activeFilter == nil {
-                // Show source picker first; recording starts when the user selects
                 showSourcePicker = true
             } else {
                 beginRecording()
@@ -348,41 +406,28 @@ struct PopoverView: View {
 
     private func beginRecording() {
         guard let filter = activeFilter else { return }
-
-        let mode: RecordingMode
-        if selectedSegment == .timeLapse {
-            mode = .timeLapse(multiplier: selectedMultiplier)
-        } else {
-            mode = .normal(fps: selectedFPS)
-        }
-
-        Task {
-            await manager.startRecording(filter: filter, mode: mode)
-        }
+        let mode: RecordingMode = selectedSegment == .timeLapse
+            ? .timeLapse(multiplier: selectedMultiplier)
+            : .normal(fps: selectedFPS)
+        Task { await manager.startRecording(filter: filter, mode: mode) }
     }
 
     // MARK: - Helpers
 
     private var elapsedFormatted: String {
-        let total   = manager.elapsedSeconds
-        let minutes = total / 60
-        let seconds = total % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+        let t = manager.elapsedSeconds
+        return String(format: "%02d:%02d", t / 60, t % 60)
     }
 
     private var abbreviatedOutputPath: String {
         let path = Prefs.outputFolder
         let home = NSHomeDirectory()
-        if path.hasPrefix(home) {
-            return "~" + path.dropFirst(home.count)
-        }
-        return path
+        return path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path
     }
 }
 
 // MARK: - RecordingDot
 
-/// Small animated red indicator dot used in the status row.
 private struct RecordingDot: View {
     @State private var opacity: Double = 1.0
 

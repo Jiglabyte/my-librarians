@@ -59,7 +59,7 @@ struct PermissionView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                Button(action: openScreenCapturePrivacySettings) {
+                Button(action: requestScreenRecordingPermission) {
                     Label("Open System Settings", systemImage: "gear")
                         .font(.system(size: 13, weight: .medium))
                         .padding(.horizontal, 16)

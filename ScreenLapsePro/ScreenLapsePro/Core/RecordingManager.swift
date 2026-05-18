@@ -7,6 +7,7 @@ import AVFoundation
 import ScreenCaptureKit
 import CoreMedia
 import AppKit
+import IOKit.pwr_mgt
 
 // MARK: - RecordingMode
 
@@ -19,27 +20,24 @@ enum RecordingMode: Equatable {
         return false
     }
 
-    /// Speed multiplier. 1 for normal recording.
     var multiplier: Int {
         switch self {
-        case .normal:                    return 1
-        case .timeLapse(let m):          return m
+        case .normal:           return 1
+        case .timeLapse(let m): return m
         }
     }
 
-    /// Frames per second that the capture engine should deliver.
     var captureFPS: Int {
         switch self {
-        case .normal(let fps):           return fps
-        case .timeLapse(let m):          return max(1, 30 / m)
+        case .normal(let fps):  return fps
+        case .timeLapse(let m): return max(1, 30 / m)
         }
     }
 
-    /// Human-readable description shown in the UI.
     var label: String {
         switch self {
-        case .normal(let fps):           return "\(fps) fps"
-        case .timeLapse(let m):          return "\(m)x time-lapse"
+        case .normal(let fps):  return "\(fps) fps"
+        case .timeLapse(let m): return "\(m)x time-lapse"
         }
     }
 }
@@ -54,47 +52,62 @@ extension Notification.Name {
 // MARK: - RecordingManager
 
 @MainActor
-final class RecordingManager: ObservableObject, CaptureEngineDelegate {
+final class RecordingManager: ObservableObject, CaptureEngineDelegate, MicrophoneCapturerDelegate {
 
     // MARK: Published State
 
-    @Published var isRecording:     Bool   = false
-    @Published var isPaused:        Bool   = false
-    @Published var elapsedSeconds:  Int    = 0
-    @Published var fileSize:        String = "0 MB"
-    @Published var outputURL:       URL?   = nil
-    @Published var error:           String? = nil
+    @Published var isRecording:        Bool    = false
+    @Published var isPaused:           Bool    = false
+    @Published var elapsedSeconds:     Int     = 0
+    @Published var fileSize:           String  = "0 MB"
+    @Published var outputURL:          URL?    = nil
+    @Published var error:              String? = nil
+    @Published var countdownRemaining: Int?    = nil
+    @Published var currentMode:        RecordingMode = .normal(fps: 30)
 
     // MARK: Internal
 
     private let captureEngine    = CaptureEngine()
+    private let micCapturer      = MicrophoneCapturer()
     private var videoWriter:     VideoWriter?
-    private var timer:           Timer?
+    private var elapsedTimer:    Timer?
+    private var autoStopTimer:   Timer?
     private var startDate:       Date?
     private var currentOutputURL: URL?
+    private var sleepAssertionID: IOPMAssertionID = 0
 
-    /// Background queue used for appending buffers to the writer.
-    private let writerQueue = DispatchQueue(label: "pro.screenlapse.writer",
-                                           qos: .userInitiated)
+    private let writerQueue = DispatchQueue(label: "pro.screenlapse.writer", qos: .userInitiated)
 
     // MARK: Init
 
     init() {
         captureEngine.delegate = self
-        _ = Prefs.shared // trigger defaults registration
+        micCapturer.delegate   = self
+        _ = Prefs.shared
     }
 
     // MARK: - Start Recording
 
     func startRecording(filter: SCContentFilter, mode: RecordingMode) async {
-        guard !isRecording else { return }
+        guard !isRecording, countdownRemaining == nil else { return }
 
         error = nil
         outputURL = nil
+
+        // Countdown
+        let countdown = Prefs.countdownSeconds
+        if countdown > 0 {
+            for i in stride(from: countdown, through: 1, by: -1) {
+                countdownRemaining = i
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
+            countdownRemaining = nil
+        }
+
         elapsedSeconds = 0
         fileSize = "0 MB"
 
-        // Prepare output URL.
+        // Output URL
         let destURL: URL
         do {
             try Prefs.ensureOutputFolderExists()
@@ -105,7 +118,7 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate {
         }
         currentOutputURL = destURL
 
-        // Determine capture dimensions from the filter.
+        // Capture dimensions
         let rect: CGRect
         let scale: CGFloat
         if #available(macOS 14.0, *) {
@@ -118,31 +131,34 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate {
         let width  = max(2, Int(rect.width  * scale))
         let height = max(2, Int(rect.height * scale))
 
-        // Create the video writer.
+        // Video writer
         let writer: VideoWriter
         do {
             writer = try VideoWriter(
-                outputURL:            destURL,
-                width:                width,
-                height:               height,
-                isTimeLapse:          mode.isTimeLapse,
-                timeLapseMultiplier:  mode.multiplier
+                outputURL:          destURL,
+                width:              width,
+                height:             height,
+                isTimeLapse:        mode.isTimeLapse,
+                timeLapseMultiplier: mode.multiplier,
+                bitratePreset:      Prefs.videoBitratePreset,
+                includeSystemAudio: Prefs.recordSystemAudio,
+                includeMicAudio:    Prefs.recordMicrophone
             )
         } catch {
             self.error = "Cannot create video writer: \(error.localizedDescription)"
             return
         }
-
         writer.start()
         videoWriter = writer
 
-        // Start the capture engine.
+        // Capture engine
         do {
             try await captureEngine.start(
-                filter:               filter,
-                fps:                  mode.captureFPS,
-                isTimeLapse:          mode.isTimeLapse,
-                timeLapseMultiplier:  mode.multiplier
+                filter:              filter,
+                fps:                 mode.captureFPS,
+                isTimeLapse:         mode.isTimeLapse,
+                timeLapseMultiplier: mode.multiplier,
+                capturesAudio:       Prefs.recordSystemAudio
             )
         } catch {
             self.error = "Cannot start capture: \(error.localizedDescription)"
@@ -150,10 +166,23 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate {
             return
         }
 
-        isRecording = true
-        isPaused    = false
-        startDate   = Date()
-        startTimer()
+        // Microphone
+        if Prefs.recordMicrophone {
+            do {
+                try micCapturer.start()
+            } catch {
+                // Non-fatal: continue without mic
+                self.error = "Microphone unavailable: \(error.localizedDescription)"
+            }
+        }
+
+        isRecording  = true
+        isPaused     = false
+        currentMode  = mode
+        startDate    = Date()
+        startElapsedTimer()
+        startAutoStopTimerIfNeeded()
+        acquireSleepAssertion()
 
         NotificationCenter.default.post(name: .recordingDidStart, object: self)
     }
@@ -163,24 +192,20 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate {
     func stopRecording() async {
         guard isRecording else { return }
 
-        // Stop capture first so no more frames arrive.
-        do {
-            try await captureEngine.stop()
-        } catch {
-            // Non-fatal; continue to finalise the writer.
-        }
+        do { try await captureEngine.stop() } catch {}
+        micCapturer.stop()
 
-        stopTimer()
+        stopElapsedTimer()
+        stopAutoStopTimer()
+        releaseSleepAssertion()
+
         isRecording = false
         isPaused    = false
 
-        // Finalise the file.
         if let writer = videoWriter {
             let finalURL = await writer.finish()
-            videoWriter = nil
-            outputURL   = finalURL
-
-            // Reveal in Finder.
+            videoWriter  = nil
+            outputURL    = finalURL
             NSWorkspace.shared.selectFile(
                 finalURL.path,
                 inFileViewerRootedAtPath: finalURL.deletingLastPathComponent().path
@@ -190,20 +215,17 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate {
         NotificationCenter.default.post(name: .recordingDidStop, object: self)
     }
 
-    // MARK: - Timer
+    // MARK: - Elapsed Timer
 
-    private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor in
-                self.tick()
-            }
+    private func startElapsedTimer() {
+        elapsedTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.tick() }
         }
     }
 
-    private func stopTimer() {
-        timer?.invalidate()
-        timer = nil
+    private func stopElapsedTimer() {
+        elapsedTimer?.invalidate()
+        elapsedTimer = nil
     }
 
     private func tick() {
@@ -213,29 +235,63 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate {
     }
 
     private func updateFileSize() {
-        guard let url = currentOutputURL else { return }
-        guard let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+        guard let url = currentOutputURL,
+              let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
               let bytes = attrs[.size] as? Int64 else { return }
-
         let mb = Double(bytes) / 1_048_576
-        if mb >= 1000 {
-            fileSize = String(format: "%.1f GB", mb / 1024)
-        } else {
-            fileSize = String(format: "%.1f MB", mb)
+        fileSize = mb >= 1000
+            ? String(format: "%.1f GB", mb / 1024)
+            : String(format: "%.1f MB", mb)
+    }
+
+    // MARK: - Auto-Stop
+
+    private func startAutoStopTimerIfNeeded() {
+        let minutes = Prefs.autoStopMinutes
+        guard minutes > 0 else { return }
+        autoStopTimer = Timer.scheduledTimer(
+            withTimeInterval: Double(minutes * 60),
+            repeats: false
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in await self?.stopRecording() }
         }
+    }
+
+    private func stopAutoStopTimer() {
+        autoStopTimer?.invalidate()
+        autoStopTimer = nil
+    }
+
+    // MARK: - Sleep Prevention
+
+    private func acquireSleepAssertion() {
+        guard Prefs.preventSleep else { return }
+        IOPMAssertionCreateWithName(
+            kIOPMAssertionTypeNoDisplaySleep as CFString,
+            IOPMAssertionLevel(kIOPMAssertionLevelOn),
+            "ScreenLapse Pro is recording" as CFString,
+            &sleepAssertionID
+        )
+    }
+
+    private func releaseSleepAssertion() {
+        guard sleepAssertionID != 0 else { return }
+        IOPMAssertionRelease(sleepAssertionID)
+        sleepAssertionID = 0
     }
 
     // MARK: - CaptureEngineDelegate
 
     nonisolated func captureEngine(_ engine: CaptureEngine,
                                    didOutputVideoFrame sampleBuffer: CMSampleBuffer) {
-        // Retain the buffer so it survives the dispatch.
-        let retained = sampleBuffer
-        writerQueue.async { [weak self] in
-            guard let self else { return }
-            // videoWriter access is from the serial writerQueue only after start; this is safe.
-            self.videoWriter?.appendFrame(retained)
-        }
+        let buf = sampleBuffer
+        writerQueue.async { [weak self] in self?.videoWriter?.appendFrame(buf) }
+    }
+
+    nonisolated func captureEngine(_ engine: CaptureEngine,
+                                   didOutputAudioFrame sampleBuffer: CMSampleBuffer) {
+        let buf = sampleBuffer
+        writerQueue.async { [weak self] in self?.videoWriter?.appendSystemAudio(buf) }
     }
 
     nonisolated func captureEngineDidStop(_ engine: CaptureEngine) {
@@ -243,5 +299,13 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate {
             guard let self, self.isRecording else { return }
             await self.stopRecording()
         }
+    }
+
+    // MARK: - MicrophoneCapturerDelegate
+
+    nonisolated func microphoneCapturer(_ capturer: MicrophoneCapturer,
+                                        didOutputSample sampleBuffer: CMSampleBuffer) {
+        let buf = sampleBuffer
+        writerQueue.async { [weak self] in self?.videoWriter?.appendMicAudio(buf) }
     }
 }

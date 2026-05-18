@@ -9,23 +9,23 @@ import SwiftUI
 struct ToolbarView: View {
 
     @ObservedObject var manager: RecordingManager
-    var mode: RecordingMode
     var onStop: () -> Void
 
     @State private var pulseOpacity: Double = 1.0
 
+    private var mode: RecordingMode { manager.currentMode }
+
     var body: some View {
         HStack(spacing: 14) {
-            // Recording indicator + badge
+
+            // Pulsing indicator + mode badge
             HStack(spacing: 6) {
                 Circle()
                     .fill(Color.red)
                     .frame(width: 8, height: 8)
                     .opacity(pulseOpacity)
-                    .animation(
-                        .easeInOut(duration: 0.9).repeatForever(autoreverses: true),
-                        value: pulseOpacity
-                    )
+                    .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true),
+                               value: pulseOpacity)
                     .onAppear { pulseOpacity = 0.25 }
 
                 Text(modeBadge)
@@ -33,9 +33,7 @@ struct ToolbarView: View {
                     .foregroundStyle(Color.red)
             }
 
-            Divider()
-                .frame(height: 18)
-                .opacity(0.3)
+            pillDivider
 
             // Elapsed time
             Text(elapsedFormatted)
@@ -47,12 +45,26 @@ struct ToolbarView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
 
+            // Audio indicators
+            if Prefs.recordSystemAudio || Prefs.recordMicrophone {
+                pillDivider
+                HStack(spacing: 4) {
+                    if Prefs.recordSystemAudio {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.green)
+                    }
+                    if Prefs.recordMicrophone {
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.green)
+                    }
+                }
+            }
+
             // Time-lapse projected output
             if mode.isTimeLapse {
-                Divider()
-                    .frame(height: 18)
-                    .opacity(0.3)
-
+                pillDivider
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Output")
                         .font(.system(size: 9))
@@ -63,23 +75,7 @@ struct ToolbarView: View {
                 }
             }
 
-            Divider()
-                .frame(height: 18)
-                .opacity(0.3)
-
-            // Pause placeholder (future feature)
-            Button(action: { /* pause — future feature */ }) {
-                Image(systemName: "pause.fill")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 28, height: 28)
-                    .background(Color.secondary.opacity(0.18))
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .help("Pause (coming soon)")
-            .disabled(true)
-            .opacity(0.5)
+            pillDivider
 
             // Stop button
             Button(action: onStop) {
@@ -105,27 +101,23 @@ struct ToolbarView: View {
 
     // MARK: - Helpers
 
+    private var pillDivider: some View {
+        Divider().frame(height: 18).opacity(0.3)
+    }
+
     private var modeBadge: String {
-        if mode.isTimeLapse {
-            return "⏩ \(mode.multiplier)x"
-        }
-        return "REC"
+        mode.isTimeLapse ? "⏩ \(mode.multiplier)x" : "REC"
     }
 
     private var elapsedFormatted: String {
-        let total   = manager.elapsedSeconds
-        let minutes = total / 60
-        let seconds = total % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+        let total = manager.elapsedSeconds
+        return String(format: "%02d:%02d", total / 60, total % 60)
     }
 
-    /// Shows what the final video duration will be once sped up.
     private var projectedDuration: String {
         guard mode.isTimeLapse, mode.multiplier > 0 else { return "—" }
-        let outputSec = manager.elapsedSeconds / mode.multiplier
-        let m = outputSec / 60
-        let s = outputSec % 60
-        return String(format: "%02d:%02d", m, s)
+        let out = manager.elapsedSeconds / mode.multiplier
+        return String(format: "%02d:%02d", out / 60, out % 60)
     }
 }
 
@@ -135,13 +127,9 @@ struct ToolbarView: View {
 struct ToolbarView_Previews: PreviewProvider {
     static var previews: some View {
         let mgr = RecordingManager()
-        ToolbarView(
-            manager: mgr,
-            mode: .timeLapse(multiplier: 15),
-            onStop: {}
-        )
-        .padding(20)
-        .background(Color.gray.opacity(0.3))
+        ToolbarView(manager: mgr, onStop: {})
+            .padding(20)
+            .background(Color.gray.opacity(0.3))
     }
 }
 #endif

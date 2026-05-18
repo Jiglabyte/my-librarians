@@ -13,31 +13,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: Status Item
 
-    private var statusItem:         NSStatusItem?
-    private var popover:            NSPopover?
+    private var statusItem: NSStatusItem?
+    private var popover:    NSPopover?
 
     // MARK: Floating Toolbar Panel
 
-    private var toolbarPanel:       NSPanel?
-    private var toolbarHostVC:      NSViewController?
+    private var toolbarPanel:  NSPanel?
+    private var toolbarHostVC: NSViewController?
 
-    // MARK: Recording state (mirrored for toolbar)
+    // MARK: Recording state
 
-    /// The manager lives inside PopoverView as a @StateObject, but we also need
-    /// a reference here for the toolbar panel. We pass it via a notification's
-    /// userInfo or by storing a weak ref when recording starts.
     private weak var recordingManager: RecordingManager?
-    private var currentMode: RecordingMode = .normal(fps: 30)
+    private var statusTimer:       Timer?
+    private var recordingStartDate: Date?
 
     // MARK: - Application Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Register defaults before any view reads them.
         _ = Prefs.shared
-
-        // Keep app hidden from the Dock (backup in case Info.plist key is missing).
         NSApp.setActivationPolicy(.accessory)
-
         buildStatusItem()
         subscribeToRecordingNotifications()
     }
@@ -45,7 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Status Item
 
     private func buildStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
         if let button = statusItem?.button {
             let img = NSImage(systemSymbolName: "record.circle", accessibilityDescription: "ScreenLapse Pro")
@@ -81,11 +75,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let rootView = PopoverView()
         let hostVC   = NSHostingController(rootView: rootView)
-        // Let the view determine its own size
         hostVC.view.translatesAutoresizingMaskIntoConstraints = false
 
         pop.contentViewController = hostVC
-        pop.contentSize = NSSize(width: 320, height: 480)
+        pop.contentSize = NSSize(width: 320, height: 520)
         popover = pop
         return pop
     }
@@ -94,55 +87,80 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func subscribeToRecordingNotifications() {
         NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleRecordingDidStart(_:)),
-            name: .recordingDidStart,
-            object: nil
+            self, selector: #selector(handleRecordingDidStart(_:)),
+            name: .recordingDidStart, object: nil
         )
         NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleRecordingDidStop(_:)),
-            name: .recordingDidStop,
-            object: nil
+            self, selector: #selector(handleRecordingDidStop(_:)),
+            name: .recordingDidStop, object: nil
         )
     }
 
     @objc private func handleRecordingDidStart(_ note: Notification) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            // Tint status icon red to indicate active recording.
-            if let button = self.statusItem?.button {
+        if let mgr = note.object as? RecordingManager {
+            recordingManager = mgr
+        }
+        recordingStartDate = Date()
+
+        if Prefs.showStatusBarTimer {
+            startStatusBarTimer()
+        } else {
+            // Just tint the icon red
+            if let button = statusItem?.button {
                 let img = NSImage(systemSymbolName: "record.circle.fill",
                                   accessibilityDescription: "Recording")
                 img?.isTemplate = false
                 button.image = img
                 button.contentTintColor = .systemRed
             }
+        }
 
-            // Retrieve manager & mode from notification if available
-            if let mgr = note.object as? RecordingManager {
-                self.recordingManager = mgr
-            }
-
-            self.showToolbarPanel()
+        if Prefs.showFloatingPill {
+            showToolbarPanel()
         }
     }
 
     @objc private func handleRecordingDidStop(_ note: Notification) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            // Restore status icon
-            if let button = self.statusItem?.button {
-                let img = NSImage(systemSymbolName: "record.circle",
-                                  accessibilityDescription: "ScreenLapse Pro")
-                img?.isTemplate = true
-                button.image = img
-                button.contentTintColor = nil
-            }
+        stopStatusBarTimer()
+        hideToolbarPanel()
+        recordingManager   = nil
+        recordingStartDate = nil
+    }
 
-            self.hideToolbarPanel()
-            self.recordingManager = nil
+    // MARK: - Status Bar Live Timer
+
+    private func startStatusBarTimer() {
+        // Show first tick immediately
+        updateStatusBarTimer()
+        statusTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.updateStatusBarTimer() }
         }
+        RunLoop.main.add(statusTimer!, forMode: .common)
+    }
+
+    private func stopStatusBarTimer() {
+        statusTimer?.invalidate()
+        statusTimer = nil
+
+        // Restore icon
+        if let button = statusItem?.button {
+            button.title = ""
+            button.image = NSImage(systemSymbolName: "record.circle",
+                                   accessibilityDescription: "ScreenLapse Pro")
+            button.image?.isTemplate = true
+            button.contentTintColor  = nil
+        }
+    }
+
+    private func updateStatusBarTimer() {
+        guard let start = recordingStartDate,
+              let button = statusItem?.button else { return }
+        let elapsed = Int(Date().timeIntervalSince(start))
+        let m = elapsed / 60
+        let s = elapsed % 60
+        button.image = nil
+        button.title = String(format: "● %02d:%02d", m, s)
+        button.contentTintColor = .systemRed
     }
 
     // MARK: - Floating Toolbar Panel
@@ -156,53 +174,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func hideToolbarPanel() {
         toolbarPanel?.orderOut(nil)
-        toolbarPanel = nil
-        toolbarHostVC = nil
+        toolbarPanel   = nil
+        toolbarHostVC  = nil
     }
 
     private func makeToolbarPanel() -> NSPanel {
         let panel = NSPanel(
-            contentRect:   NSRect(x: 0, y: 0, width: 500, height: 56),
-            styleMask:     [.nonactivatingPanel, .fullSizeContentView, .borderless],
-            backing:       .buffered,
-            defer:         false
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 56),
+            styleMask:   [.nonactivatingPanel, .fullSizeContentView, .borderless],
+            backing:     .buffered,
+            defer:       false
         )
-        panel.level                    = .floating
-        panel.isOpaque                 = false
-        panel.backgroundColor          = .clear
-        panel.hasShadow                = false
+        panel.level    = .floating
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = false
         panel.isMovableByWindowBackground = true
-        panel.collectionBehavior       = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
 
-        // Use a placeholder manager if the real one isn't available yet.
-        let manager = recordingManager ?? RecordingManager()
-        let mode    = currentMode
-
-        let toolbarView = ToolbarView(manager: manager, mode: mode) { [weak self] in
+        let manager     = recordingManager ?? RecordingManager()
+        let toolbarView = ToolbarView(manager: manager, onStop: { [weak self] in
             Task { await manager.stopRecording() }
             self?.hideToolbarPanel()
-        }
+        })
 
         let hostVC = NSHostingController(rootView: toolbarView)
-        hostVC.view.wantsLayer       = true
+        hostVC.view.wantsLayer         = true
         hostVC.view.layer?.backgroundColor = NSColor.clear.cgColor
-        hostVC.sizingOptions         = []
+        hostVC.sizingOptions           = []
 
         panel.contentViewController = hostVC
         toolbarHostVC = hostVC
-
         return panel
     }
 
     private func positionToolbarPanel(_ panel: NSPanel) {
         guard let screen = NSScreen.main else { return }
-        let screenFrame  = screen.visibleFrame
-        // Place in the top-right of the main display, with a small inset.
-        let panelWidth:  CGFloat = 480
-        let panelHeight: CGFloat = 56
-        let x = screenFrame.maxX - panelWidth - 20
-        let y = screenFrame.maxY - panelHeight - 12
-        panel.setFrame(NSRect(x: x, y: y, width: panelWidth, height: panelHeight),
+        let frame = screen.visibleFrame
+        let w: CGFloat = 500
+        let h: CGFloat = 56
+        panel.setFrame(NSRect(x: frame.maxX - w - 20,
+                              y: frame.maxY - h - 12,
+                              width: w, height: h),
                        display: false)
     }
 }
