@@ -130,12 +130,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Status Bar Live Timer
 
     private func startStatusBarTimer() {
-        // Show first tick immediately
         updateStatusBarTimer()
-        statusTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        // Use Timer(timeInterval:) + RunLoop.add(.common) so the timer fires even
+        // when the run loop is in tracking mode (e.g. while a menu is open).
+        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.updateStatusBarTimer() }
         }
-        RunLoop.main.add(statusTimer!, forMode: .common)
+        RunLoop.main.add(t, forMode: .common)
+        statusTimer = t
     }
 
     private func stopStatusBarTimer() {

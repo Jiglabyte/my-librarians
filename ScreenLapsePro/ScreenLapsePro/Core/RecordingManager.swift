@@ -30,7 +30,7 @@ enum RecordingMode: Equatable {
     var captureFPS: Int {
         switch self {
         case .normal(let fps):  return fps
-        case .timeLapse(let m): return max(1, 30 / m)
+        case .timeLapse(let m): return Swift.max(1, 30 / m)
         }
     }
 
@@ -52,12 +52,11 @@ extension Notification.Name {
 // MARK: - RecordingManager
 
 @MainActor
-final class RecordingManager: ObservableObject, CaptureEngineDelegate, MicrophoneCapturerDelegate {
+final class RecordingManager: ObservableObject {
 
     // MARK: Published State
 
     @Published var isRecording:        Bool    = false
-    @Published var isPaused:           Bool    = false
     @Published var elapsedSeconds:     Int     = 0
     @Published var fileSize:           String  = "0 MB"
     @Published var outputURL:          URL?    = nil
@@ -65,17 +64,19 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate, Microphon
     @Published var countdownRemaining: Int?    = nil
     @Published var currentMode:        RecordingMode = .normal(fps: 30)
 
-    // MARK: Internal
+    // MARK: Private — infrastructure
 
-    private let captureEngine    = CaptureEngine()
-    private let micCapturer      = MicrophoneCapturer()
-    private var videoWriter:     VideoWriter?
-    private var elapsedTimer:    Timer?
-    private var autoStopTimer:   Timer?
-    private var startDate:       Date?
+    private let captureEngine = CaptureEngine()
+    private let micCapturer   = MicrophoneCapturer()
+    private var videoWriter:  VideoWriter?
+    private var elapsedTimer: Timer?
+    private var autoStopTimer: Timer?
+    private var recordingTask: Task<Void, Never>?
+    private var startDate:     Date?
     private var currentOutputURL: URL?
     private var sleepAssertionID: IOPMAssertionID = 0
 
+    /// Serial queue for all VideoWriter appends — keeps audio+video ordering tight.
     private let writerQueue = DispatchQueue(label: "pro.screenlapse.writer", qos: .userInitiated)
 
     // MARK: Init
@@ -86,24 +87,50 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate, Microphon
         _ = Prefs.shared
     }
 
-    // MARK: - Start Recording
+    // MARK: - Start (synchronous entry point)
 
-    func startRecording(filter: SCContentFilter, mode: RecordingMode) async {
-        guard !isRecording, countdownRemaining == nil else { return }
+    /// Kicks off a countdown (if configured) then starts recording.
+    /// Non-async so callers don't need a Task wrapper.
+    func startRecording(filter: SCContentFilter, mode: RecordingMode) {
+        guard !isRecording, recordingTask == nil else { return }
 
-        error = nil
-        outputURL = nil
+        recordingTask = Task { [weak self] in
+            await self?.runCountdownThenRecord(filter: filter, mode: mode)
+            await MainActor.run { self?.recordingTask = nil }
+        }
+    }
 
-        // Countdown
-        let countdown = Prefs.countdownSeconds
-        if countdown > 0 {
-            for i in stride(from: countdown, through: 1, by: -1) {
+    /// Cancel an active countdown before recording has actually begun.
+    func cancelCountdown() {
+        recordingTask?.cancel()
+        recordingTask = nil
+        countdownRemaining = nil
+    }
+
+    // MARK: - Countdown + Record
+
+    private func runCountdownThenRecord(filter: SCContentFilter, mode: RecordingMode) async {
+        let seconds = Prefs.countdownSeconds
+        if seconds > 0 {
+            for i in stride(from: seconds, through: 1, by: -1) {
+                guard !Task.isCancelled else {
+                    countdownRemaining = nil
+                    return
+                }
                 countdownRemaining = i
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
             countdownRemaining = nil
         }
+        guard !Task.isCancelled else { return }
+        await performRecordingStart(filter: filter, mode: mode)
+    }
 
+    // MARK: - Actual Recording Start
+
+    private func performRecordingStart(filter: SCContentFilter, mode: RecordingMode) async {
+        error    = nil
+        outputURL = nil
         elapsedSeconds = 0
         fileSize = "0 MB"
 
@@ -128,21 +155,26 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate, Microphon
             scale = 2.0
             rect  = NSScreen.main?.frame ?? CGRect(x: 0, y: 0, width: 1920, height: 1080)
         }
-        let width  = max(2, Int(rect.width  * scale))
-        let height = max(2, Int(rect.height * scale))
+        let width  = Swift.max(2, Int(rect.width  * scale))
+        let height = Swift.max(2, Int(rect.height * scale))
 
-        // Video writer
+        // Audio only makes sense for normal recording.
+        // Time-lapse uses synthetic video PTS that would completely desync real audio PTS.
+        let wantSystemAudio = !mode.isTimeLapse && Prefs.recordSystemAudio
+        let wantMicAudio    = !mode.isTimeLapse && Prefs.recordMicrophone
+
+        // Build VideoWriter
         let writer: VideoWriter
         do {
             writer = try VideoWriter(
-                outputURL:          destURL,
-                width:              width,
-                height:             height,
-                isTimeLapse:        mode.isTimeLapse,
+                outputURL:           destURL,
+                width:               width,
+                height:              height,
+                isTimeLapse:         mode.isTimeLapse,
                 timeLapseMultiplier: mode.multiplier,
-                bitratePreset:      Prefs.videoBitratePreset,
-                includeSystemAudio: Prefs.recordSystemAudio,
-                includeMicAudio:    Prefs.recordMicrophone
+                bitratePreset:       Prefs.videoBitratePreset,
+                includeSystemAudio:  wantSystemAudio,
+                includeMicAudio:     wantMicAudio
             )
         } catch {
             self.error = "Cannot create video writer: \(error.localizedDescription)"
@@ -151,14 +183,14 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate, Microphon
         writer.start()
         videoWriter = writer
 
-        // Capture engine
+        // Start capture engine
         do {
             try await captureEngine.start(
                 filter:              filter,
                 fps:                 mode.captureFPS,
                 isTimeLapse:         mode.isTimeLapse,
                 timeLapseMultiplier: mode.multiplier,
-                capturesAudio:       Prefs.recordSystemAudio
+                capturesAudio:       wantSystemAudio
             )
         } catch {
             self.error = "Cannot start capture: \(error.localizedDescription)"
@@ -166,23 +198,23 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate, Microphon
             return
         }
 
-        // Microphone
-        if Prefs.recordMicrophone {
+        // Microphone (non-fatal if it fails)
+        if wantMicAudio {
             do {
                 try micCapturer.start()
             } catch {
-                // Non-fatal: continue without mic
                 self.error = "Microphone unavailable: \(error.localizedDescription)"
             }
         }
 
-        isRecording  = true
-        isPaused     = false
-        currentMode  = mode
-        startDate    = Date()
+        // All setup succeeded — update state
+        isRecording = true
+        currentMode = mode
+        startDate   = Date()
+
         startElapsedTimer()
         startAutoStopTimerIfNeeded()
-        acquireSleepAssertion()
+        acquireSleepAssertion()   // Only acquired after successful start
 
         NotificationCenter.default.post(name: .recordingDidStart, object: self)
     }
@@ -192,23 +224,30 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate, Microphon
     func stopRecording() async {
         guard isRecording else { return }
 
+        // Stop inbound streams first so no more frames are dispatched to writerQueue
         do { try await captureEngine.stop() } catch {}
         micCapturer.stop()
 
         stopElapsedTimer()
         stopAutoStopTimer()
         releaseSleepAssertion()
-
         isRecording = false
-        isPaused    = false
 
-        if let writer = videoWriter {
-            let finalURL = await writer.finish()
-            videoWriter  = nil
-            outputURL    = finalURL
+        // Drain writerQueue so all in-flight appends complete before we hand off to finish()
+        let writer = videoWriter
+        videoWriter = nil
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            writerQueue.async { cont.resume() }
+        }
+
+        guard let writer else { return }
+        let finalURL = await writer.finish()
+        outputURL = finalURL
+
+        if let url = finalURL {
             NSWorkspace.shared.selectFile(
-                finalURL.path,
-                inFileViewerRootedAtPath: finalURL.deletingLastPathComponent().path
+                url.path,
+                inFileViewerRootedAtPath: url.deletingLastPathComponent().path
             )
         }
 
@@ -249,12 +288,11 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate, Microphon
     private func startAutoStopTimerIfNeeded() {
         let minutes = Prefs.autoStopMinutes
         guard minutes > 0 else { return }
-        autoStopTimer = Timer.scheduledTimer(
-            withTimeInterval: Double(minutes * 60),
-            repeats: false
-        ) { [weak self] _ in
+        let t = Timer(timeInterval: Double(minutes * 60), repeats: false) { [weak self] _ in
             Task { @MainActor [weak self] in await self?.stopRecording() }
         }
+        RunLoop.main.add(t, forMode: .common)
+        autoStopTimer = t
     }
 
     private func stopAutoStopTimer() {
@@ -265,7 +303,7 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate, Microphon
     // MARK: - Sleep Prevention
 
     private func acquireSleepAssertion() {
-        guard Prefs.preventSleep else { return }
+        guard Prefs.preventSleep, sleepAssertionID == 0 else { return }
         IOPMAssertionCreateWithName(
             kIOPMAssertionTypeNoDisplaySleep as CFString,
             IOPMAssertionLevel(kIOPMAssertionLevelOn),
@@ -279,8 +317,11 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate, Microphon
         IOPMAssertionRelease(sleepAssertionID)
         sleepAssertionID = 0
     }
+}
 
-    // MARK: - CaptureEngineDelegate
+// MARK: - CaptureEngineDelegate
+
+extension RecordingManager: CaptureEngineDelegate {
 
     nonisolated func captureEngine(_ engine: CaptureEngine,
                                    didOutputVideoFrame sampleBuffer: CMSampleBuffer) {
@@ -300,8 +341,11 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate, Microphon
             await self.stopRecording()
         }
     }
+}
 
-    // MARK: - MicrophoneCapturerDelegate
+// MARK: - MicrophoneCapturerDelegate
+
+extension RecordingManager: MicrophoneCapturerDelegate {
 
     nonisolated func microphoneCapturer(_ capturer: MicrophoneCapturer,
                                         didOutputSample sampleBuffer: CMSampleBuffer) {

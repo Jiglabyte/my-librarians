@@ -320,22 +320,32 @@ struct PopoverView: View {
     // MARK: - Record Button
 
     private var recordButton: some View {
-        Button(action: startOrStop) {
+        let isCounting  = manager.countdownRemaining != nil
+        let isActive    = manager.isRecording || isCounting
+        let icon        = isActive ? "stop.fill"    : "circle.fill"
+        let label       = manager.isRecording ? "Stop Recording"
+                        : isCounting          ? "Cancel"
+                        :                       "Start Recording"
+        let bgColor: Color = isActive ? Color.secondary.opacity(0.2) : Color.red
+        let fgColor: Color = isActive ? Color.primary : Color.white
+
+        return Button(action: startOrStop) {
             HStack(spacing: 8) {
-                Image(systemName: manager.isRecording ? "stop.fill" : "circle.fill")
+                Image(systemName: icon)
                     .font(.system(size: 13))
-                    .foregroundStyle(manager.isRecording ? Color.primary : Color.white)
-                Text(manager.isRecording ? "Stop Recording" : "Start Recording")
+                    .foregroundStyle(fgColor)
+                Text(label)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(manager.isRecording ? Color.primary : Color.white)
+                    .foregroundStyle(fgColor)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(manager.isRecording ? Color.secondary.opacity(0.2) : Color.red)
+            .background(bgColor)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
         .padding(.top, 6)
+        .animation(.easeInOut(duration: 0.15), value: isActive)
     }
 
     // MARK: - Error Banner
@@ -395,6 +405,8 @@ struct PopoverView: View {
     private func startOrStop() {
         if manager.isRecording {
             Task { await manager.stopRecording() }
+        } else if manager.countdownRemaining != nil {
+            manager.cancelCountdown()
         } else {
             if activeFilter == nil {
                 showSourcePicker = true
@@ -409,7 +421,7 @@ struct PopoverView: View {
         let mode: RecordingMode = selectedSegment == .timeLapse
             ? .timeLapse(multiplier: selectedMultiplier)
             : .normal(fps: selectedFPS)
-        Task { await manager.startRecording(filter: filter, mode: mode) }
+        manager.startRecording(filter: filter, mode: mode)
     }
 
     // MARK: - Helpers
