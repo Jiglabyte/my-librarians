@@ -106,13 +106,15 @@ final class RecordingManager: ObservableObject, CaptureEngineDelegate {
         currentOutputURL = destURL
 
         // Determine capture dimensions from the filter.
+        let rect: CGRect
         let scale: CGFloat
         if #available(macOS 14.0, *) {
-            scale = filter.pointPixelScale
+            scale = CGFloat(filter.pointPixelScale)
+            rect  = filter.contentRect
         } else {
             scale = 2.0
+            rect  = NSScreen.main?.frame ?? CGRect(x: 0, y: 0, width: 1920, height: 1080)
         }
-        let rect   = filter.contentRect
         let width  = max(2, Int(rect.width  * scale))
         let height = max(2, Int(rect.height * scale))
 

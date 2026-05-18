@@ -3,6 +3,7 @@
 // SCStream wrapper that captures screen frames and forwards them to a delegate
 
 import Foundation
+import AppKit
 import ScreenCaptureKit
 import CoreMedia
 
@@ -47,14 +48,16 @@ final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         config.pixelFormat = kCVPixelFormatType_32BGRA
 
         // Derive capture dimensions from the content filter's rectangle.
-        // pointPixelScale is available on macOS 14+; fall back to 2× (Retina default) on 13.
+        // pointPixelScale and contentRect are macOS 14+; fall back to Retina defaults on 13.
+        let rect: CGRect
         let scale: CGFloat
         if #available(macOS 14.0, *) {
-            scale = filter.pointPixelScale
+            scale = CGFloat(filter.pointPixelScale)
+            rect  = filter.contentRect
         } else {
             scale = 2.0
+            rect  = NSScreen.main?.frame ?? CGRect(x: 0, y: 0, width: 1920, height: 1080)
         }
-        let rect   = filter.contentRect
         let width  = max(2, Int(rect.width  * scale))
         let height = max(2, Int(rect.height * scale))
 
