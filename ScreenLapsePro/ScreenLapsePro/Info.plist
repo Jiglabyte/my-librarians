@@ -12,5 +12,7 @@
 	<string>ScreenLapse Pro uses the camera for the optional webcam overlay.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>ScreenLapse Pro uses the microphone to record your voice during recordings.</string>
+	<key>LSUIElement</key>
+	<true/>
 </dict>
 </plist>

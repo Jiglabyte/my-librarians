@@ -31,7 +31,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         _ = Prefs.shared
-        NSApp.setActivationPolicy(.accessory)
+        // LSUIElement = YES in Info.plist already declares this as a menu-bar agent;
+        // no need to call setActivationPolicy at runtime.
         buildStatusItem()
         subscribeToRecordingNotifications()
     }
@@ -70,34 +71,66 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showContextMenu() {
         let menu = NSMenu()
 
-        let header = NSMenuItem(title: "ScreenLapse Pro", action: nil, keyEquivalent: "")
-        header.isEnabled = false
-        menu.addItem(header)
-        menu.addItem(.separator())
+        // ── Recording controls (only when active) ──────────────────────────
+        if let mgr = recordingManager, mgr.isRecording {
+            let stopItem = NSMenuItem(
+                title: "Stop Recording",
+                action: #selector(stopRecordingFromMenu),
+                keyEquivalent: ""
+            )
+            stopItem.target = self
+            stopItem.image  = NSImage(systemSymbolName: "stop.fill", accessibilityDescription: nil)
+            menu.addItem(stopItem)
+            menu.addItem(.separator())
+        }
 
-        let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettingsFromMenu), keyEquivalent: ",")
+        // ── App actions ────────────────────────────────────────────────────
+        let openItem = NSMenuItem(
+            title: "Open ScreenLapse Pro",
+            action: #selector(openPopoverFromMenu),
+            keyEquivalent: ""
+        )
+        openItem.target = self
+        menu.addItem(openItem)
+
+        let settingsItem = NSMenuItem(
+            title: "Settings…",
+            action: #selector(openSettingsFromMenu),
+            keyEquivalent: ","
+        )
         settingsItem.target = self
         menu.addItem(settingsItem)
 
         menu.addItem(.separator())
 
-        let quitItem = NSMenuItem(title: "Quit ScreenLapse Pro", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(
+            title: "Quit ScreenLapse Pro",
+            action: #selector(quitApp),
+            keyEquivalent: "q"
+        )
         quitItem.target = self
         menu.addItem(quitItem)
 
-        // Temporarily assign the menu so NSStatusItem shows it on click
+        // Show by temporarily assigning, then clear so left-click still opens popover
         statusItem?.menu = menu
         statusItem?.button?.performClick(nil)
-        // Remove after display so left-click continues to show the popover
         statusItem?.menu = nil
     }
 
+    @objc private func openPopoverFromMenu() {
+        if let button = statusItem?.button { showPopover(button) }
+    }
+
     @objc private func openSettingsFromMenu() {
-        // Open popover then trigger settings sheet via notification
-        if let button = statusItem?.button {
-            showPopover(button)
+        if let button = statusItem?.button { showPopover(button) }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            NotificationCenter.default.post(name: .openSettingsRequest, object: nil)
         }
-        NotificationCenter.default.post(name: .openSettingsRequest, object: nil)
+    }
+
+    @objc private func stopRecordingFromMenu() {
+        guard let mgr = recordingManager else { return }
+        Task { await mgr.stopRecording() }
     }
 
     @objc private func quitApp() {
