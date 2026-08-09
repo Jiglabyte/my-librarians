@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>PerfectScreen</title>
+<link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+
+<header>
+  <h1>PerfectScreen</h1>
+  <div class="header-actions">
+    <button id="btn-apply" class="primary" title="Rig the selected footage layer">Apply to Layer</button>
+    <button id="btn-refresh" title="Re-read values from the selected rig">&#8635;</button>
+  </div>
+  <div id="status" class="status">Select a footage layer, then Apply.</div>
+</header>
+
+<main>
+
+  <section>
+    <h2>Corner Pin</h2>
+    <p class="hint">Select the Corner Pin effect on the rigged layer and drag its
+      points in the comp viewer, or draw a 4-point mask (clockwise from
+      top-left) and click Set From Mask.</p>
+    <div class="row buttons">
+      <button id="btn-pin-mask">Set From Mask</button>
+      <button id="btn-pin-reset">Reset Pin</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Optics</h2>
+    <div class="row"><label>Exposure</label>
+      <input type="range" id="c-exposure" data-ctl="PS Exposure" min="-3" max="3" step="0.05" value="0">
+      <span class="val" id="v-exposure">0</span></div>
+    <div class="row check"><label><input type="checkbox" id="c-autoexposure" data-ctl="PS Auto Exposure"> Auto Exposure</label></div>
+    <div class="row"><label>Distortion</label>
+      <input type="range" id="c-distortion" data-ctl="PS Distortion" min="-50" max="50" step="1" value="5">
+      <span class="val" id="v-distortion">5</span></div>
+    <div class="row"><label>Depth of Field</label>
+      <input type="range" id="c-dof" data-ctl="PS DOF" min="0" max="100" step="1" value="15">
+      <span class="val" id="v-dof">15</span></div>
+  </section>
+
+  <section>
+    <h2>Color</h2>
+    <div class="row"><label>Tint Type</label>
+      <select id="c-tinttype" data-ctl="PS Tint Type">
+        <option value="0">Neutral</option>
+        <option value="1">Warm</option>
+        <option value="2">Cool</option>
+        <option value="3">Green</option>
+      </select><span class="val"></span></div>
+    <div class="row"><label>Tint Amount</label>
+      <input type="range" id="c-tintamount" data-ctl="PS Tint Amount" min="0" max="100" step="1" value="0">
+      <span class="val" id="v-tintamount">0</span></div>
+    <div class="row"><label>Chromatic Ab.</label>
+      <input type="range" id="c-chromab" data-ctl="PS Chromatic Aberration" min="0" max="20" step="0.5" value="2">
+      <span class="val" id="v-chromab">2</span></div>
+  </section>
+
+  <section>
+    <h2>Surface</h2>
+    <div class="row"><label>Vignette</label>
+      <input type="range" id="c-vignette" data-ctl="PS Vignette" min="0" max="100" step="1" value="35">
+      <span class="val" id="v-vignette">35</span></div>
+    <div class="row"><label>Vig. Feather</label>
+      <input type="range" id="c-vigfeather" data-ctl="PS Vignette Feather" min="0" max="200" step="1" value="100">
+      <span class="val" id="v-vigfeather">100</span></div>
+    <div class="row"><label>Dust Amount</label>
+      <input type="range" id="c-dustamount" data-ctl="PS Dust Amount" min="0" max="100" step="1" value="12">
+      <span class="val" id="v-dustamount">12</span></div>
+    <div class="row"><label>Dust Size</label>
+      <input type="range" id="c-dustsize" data-ctl="PS Dust Size" min="1" max="10" step="0.5" value="3">
+      <span class="val" id="v-dustsize">3</span></div>
+    <div class="row"><label>Dust Opacity</label>
+      <input type="range" id="c-dustopacity" data-ctl="PS Dust Opacity" min="0" max="100" step="1" value="70">
+      <span class="val" id="v-dustopacity">70</span></div>
+    <div class="row"><label>Grain</label>
+      <input type="range" id="c-grain" data-ctl="PS Grain" min="0" max="100" step="1" value="20">
+      <span class="val" id="v-grain">20</span></div>
+    <div class="row"><label>Grain Size</label>
+      <input type="range" id="c-grainsize" data-ctl="PS Grain Size" min="0.2" max="3" step="0.1" value="1">
+      <span class="val" id="v-grainsize">1</span></div>
+  </section>
+
+  <section id="pixel-section">
+    <h2>LCD Pixels
+      <label class="master-toggle">
+        <input type="checkbox" id="c-pixelson" data-ctl="PS Pixels On" checked>
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </label>
+    </h2>
+    <div id="pixel-controls">
+      <div class="row"><label>Pixel Size</label>
+        <input type="range" id="c-pixelsize" data-ctl="PS Pixel Size" min="1" max="20" step="1" value="4">
+        <span class="val" id="v-pixelsize">4</span></div>
+      <div class="row"><label>Grid Intensity</label>
+        <input type="range" id="c-gridintensity" data-ctl="PS Grid Intensity" min="0" max="100" step="1" value="35">
+        <span class="val" id="v-gridintensity">35</span></div>
+      <div class="row"><label>Pixel Glow</label>
+        <input type="range" id="c-pixelglow" data-ctl="PS Pixel Glow" min="0" max="100" step="1" value="30">
+        <span class="val" id="v-pixelglow">30</span></div>
+      <div class="row check"><label><input type="checkbox" id="c-scanlines" data-ctl="PS Scanlines On"> Scanlines</label></div>
+      <div class="row"><label>RGB Shift</label>
+        <input type="range" id="c-rgbshift" data-ctl="PS RGB Shift" min="0" max="15" step="0.5" value="2">
+        <span class="val" id="v-rgbshift">2</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Presets</h2>
+    <div class="row buttons">
+      <select id="preset-select"></select>
+      <button id="btn-preset">Load</button>
+    </div>
+  </section>
+
+</main>
+
+<script src="js/presets.js"></script>
+<script src="js/panel.js"></script>
+</body>
+</html>
