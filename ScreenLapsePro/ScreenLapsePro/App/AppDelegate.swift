@@ -27,6 +27,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusTimer:        Timer?
     private var recordingStartDate: Date?
 
+    // MARK: Global Hotkey
+
+    private let globalHotkey = GlobalHotkey()
+
     // MARK: - Application Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -35,6 +39,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // no need to call setActivationPolicy at runtime.
         buildStatusItem()
         subscribeToRecordingNotifications()
+        registerGlobalHotkey()
+    }
+
+    // MARK: - Global Hotkey
+
+    /// Registers ⌃⇧R to toggle recording. If a session is active the hotkey stops
+    /// it; otherwise it opens the popover so the user can pick a source.
+    private func registerGlobalHotkey() {
+        globalHotkey.register { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                if let manager = self.recordingManager, manager.isRecording {
+                    await manager.stopRecording()
+                } else if let button = self.statusItem?.button {
+                    self.showPopover(button)
+                }
+            }
+        }
     }
 
     // MARK: - Status Item

@@ -19,6 +19,7 @@
 		261C2F30D35B4C8BB78C53A7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B391564D47144133ADBAD5AC /* SettingsView.swift */; };
 		DC7962B6086A4DEFB0EDE9F6 /* Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7402688652A42E78BE3DF8E /* Permissions.swift */; };
 		C709FB258E3D481280F87AF1 /* Prefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD0CB8CE739A4F719788352F /* Prefs.swift */; };
+		B4C5D60000000000000000A1 /* GlobalHotkey.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4C5D60000000000000000A2 /* GlobalHotkey.swift */; };
 		8C0A81DAE2484EFAA88C45D0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E8E307275D4042BF8C00D74C /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -35,6 +36,7 @@
 		B391564D47144133ADBAD5AC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		C7402688652A42E78BE3DF8E /* Permissions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Permissions.swift; sourceTree = "<group>"; };
 		FD0CB8CE739A4F719788352F /* Prefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Prefs.swift; sourceTree = "<group>"; };
+		B4C5D60000000000000000A2 /* GlobalHotkey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotkey.swift; sourceTree = "<group>"; };
 		E8E307275D4042BF8C00D74C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0BB954F0CFF74E7F8EFF2A62 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		E8D30EEA811A464390693198 /* ScreenLapsePro.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ScreenLapsePro.entitlements; sourceTree = "<group>"; };
@@ -118,6 +120,7 @@
 			children = (
 				C7402688652A42E78BE3DF8E /* Permissions.swift */,
 				FD0CB8CE739A4F719788352F /* Prefs.swift */,
+				B4C5D60000000000000000A2 /* GlobalHotkey.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -207,6 +210,7 @@
 				261C2F30D35B4C8BB78C53A7 /* SettingsView.swift in Sources */,
 				DC7962B6086A4DEFB0EDE9F6 /* Permissions.swift in Sources */,
 				C709FB258E3D481280F87AF1 /* Prefs.swift in Sources */,
+				B4C5D60000000000000000A1 /* GlobalHotkey.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
