@@ -5,6 +5,7 @@
 import AppKit
 import SwiftUI
 import ScreenCaptureKit
+import Carbon.HIToolbox
 
 // MARK: - AppDelegate
 
@@ -27,9 +28,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusTimer:        Timer?
     private var recordingStartDate: Date?
 
-    // MARK: Global Hotkey
+    // MARK: Global Hotkeys
 
-    private let globalHotkey = GlobalHotkey()
+    private let recordHotkey = GlobalHotkey(id: 1)
+    private let pauseHotkey  = GlobalHotkey(id: 2)
 
     // MARK: - Application Lifecycle
 
@@ -42,18 +44,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         registerGlobalHotkey()
     }
 
-    // MARK: - Global Hotkey
+    // MARK: - Global Hotkeys
 
-    /// Registers ⌃⇧R to toggle recording. If a session is active the hotkey stops
-    /// it; otherwise it opens the popover so the user can pick a source.
+    /// Registers ⌃⇧R (toggle recording) and ⌃⇧P (pause / resume).
     private func registerGlobalHotkey() {
-        globalHotkey.register { [weak self] in
+        // ⌃⇧R — start / stop
+        recordHotkey.register { [weak self] in
             Task { @MainActor in
                 guard let self else { return }
                 if let manager = self.recordingManager, manager.isRecording {
                     await manager.stopRecording()
                 } else if let button = self.statusItem?.button {
                     self.showPopover(button)
+                }
+            }
+        }
+
+        // ⌃⇧P — pause / resume (only meaningful while recording)
+        pauseHotkey.register(keyCode: UInt32(kVK_ANSI_P)) { [weak self] in
+            Task { @MainActor in
+                guard let self, let manager = self.recordingManager, manager.isRecording else { return }
+                if manager.isPaused {
+                    manager.resumeRecording()
+                } else {
+                    manager.pauseRecording()
                 }
             }
         }

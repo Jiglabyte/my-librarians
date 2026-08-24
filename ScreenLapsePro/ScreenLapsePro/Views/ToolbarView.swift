@@ -87,7 +87,7 @@ struct ToolbarView: View {
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
-            .help(manager.isPaused ? "Resume Recording" : "Pause Recording")
+            .help(manager.isPaused ? "Resume Recording (⌃⇧P)" : "Pause Recording (⌃⇧P)")
 
             // Stop button
             Button(action: onStop) {

@@ -16,9 +16,17 @@ final class GlobalHotkey {
 
     private var eventHotKeyRef: EventHotKeyRef?
     private var eventHandler:   EventHandlerRef?
-    private let hotKeyID = EventHotKeyID(signature: OSType(0x534C5052), // "SLPR"
-                                         id: 1)
+    private var hotKeyID: EventHotKeyID
     private var callback: (() -> Void)?
+
+    // MARK: Init
+
+    /// - Parameter id: Distinct identifier per hotkey. Two GlobalHotkey instances
+    ///   in the same app must use different ids or their events collide.
+    init(id: UInt32 = 1) {
+        self.hotKeyID = EventHotKeyID(signature: OSType(0x534C5052), // "SLPR"
+                                      id: id)
+    }
 
     // MARK: Register
 
