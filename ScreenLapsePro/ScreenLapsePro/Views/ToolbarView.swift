@@ -77,6 +77,18 @@ struct ToolbarView: View {
 
             pillDivider
 
+            // Pause / Resume
+            Button(action: togglePause) {
+                Image(systemName: manager.isPaused ? "play.fill" : "pause.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.primary)
+                    .frame(width: 28, height: 28)
+                    .background(Color.secondary.opacity(0.18))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .help(manager.isPaused ? "Resume Recording" : "Pause Recording")
+
             // Stop button
             Button(action: onStop) {
                 Image(systemName: "stop.fill")
@@ -101,12 +113,21 @@ struct ToolbarView: View {
 
     // MARK: - Helpers
 
+    private func togglePause() {
+        if manager.isPaused {
+            manager.resumeRecording()
+        } else {
+            manager.pauseRecording()
+        }
+    }
+
     private var pillDivider: some View {
         Divider().frame(height: 18).opacity(0.3)
     }
 
     private var modeBadge: String {
-        mode.isTimeLapse ? "⏩ \(mode.multiplier)x" : "REC"
+        if manager.isPaused { return "PAUSED" }
+        return mode.isTimeLapse ? "⏩ \(mode.multiplier)x" : "REC"
     }
 
     private var elapsedFormatted: String {

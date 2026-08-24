@@ -57,6 +57,7 @@ final class RecordingManager: ObservableObject {
     // MARK: Published State
 
     @Published var isRecording:        Bool    = false
+    @Published var isPaused:           Bool    = false
     @Published var elapsedSeconds:     Int     = 0
     @Published var fileSize:           String  = "0 MB"
     @Published var outputURL:          URL?    = nil
@@ -80,6 +81,10 @@ final class RecordingManager: ObservableObject {
 
     /// Serial queue for all VideoWriter appends — keeps audio+video ordering tight.
     private let writerQueue = DispatchQueue(label: "pro.screenlapse.writer", qos: .userInitiated)
+
+    /// Pause flag consulted from writerQueue. Only mutated via `writerQueue.async`
+    /// to keep access serialised with buffer appends on the same queue.
+    nonisolated(unsafe) private var isPausedForFrames = false
 
     // MARK: Init
 
@@ -211,14 +216,37 @@ final class RecordingManager: ObservableObject {
 
         // All setup succeeded — update state
         isRecording = true
+        isPaused    = false
         currentMode = mode
         startDate   = Date()
+        writerQueue.async { self.isPausedForFrames = false }
 
         startElapsedTimer()
         startAutoStopTimerIfNeeded()
         acquireSleepAssertion()   // Only acquired after successful start
 
         NotificationCenter.default.post(name: .recordingDidStart, object: self)
+    }
+
+    // MARK: - Pause / Resume
+
+    /// Freezes the recording: the elapsed timer stops and incoming buffers are
+    /// dropped by the writer queue until `resumeRecording` is called.
+    func pauseRecording() {
+        guard isRecording, !isPaused else { return }
+        isPaused = true
+        writerQueue.async { self.isPausedForFrames = true }
+        stopElapsedTimer()
+    }
+
+    /// Resumes a paused recording. Advances `startDate` forward by the paused
+    /// duration so `elapsedSeconds` continues counting from where it stopped.
+    func resumeRecording() {
+        guard isRecording, isPaused else { return }
+        isPaused  = false
+        startDate = Date().addingTimeInterval(-TimeInterval(elapsedSeconds))
+        writerQueue.async { self.isPausedForFrames = false }
+        startElapsedTimer()
     }
 
     // MARK: - Stop Recording
@@ -234,6 +262,7 @@ final class RecordingManager: ObservableObject {
         stopAutoStopTimer()
         releaseSleepAssertion()
         isRecording = false
+        isPaused    = false
 
         // Drain writerQueue so all in-flight appends complete before we hand off to finish()
         let writer = videoWriter
@@ -328,13 +357,19 @@ extension RecordingManager: CaptureEngineDelegate {
     nonisolated func captureEngine(_ engine: CaptureEngine,
                                    didOutputVideoFrame sampleBuffer: CMSampleBuffer) {
         let buf = sampleBuffer
-        writerQueue.async { [weak self] in self?.videoWriter?.appendFrame(buf) }
+        writerQueue.async { [weak self] in
+            guard let self, !self.isPausedForFrames else { return }
+            self.videoWriter?.appendFrame(buf)
+        }
     }
 
     nonisolated func captureEngine(_ engine: CaptureEngine,
                                    didOutputAudioFrame sampleBuffer: CMSampleBuffer) {
         let buf = sampleBuffer
-        writerQueue.async { [weak self] in self?.videoWriter?.appendSystemAudio(buf) }
+        writerQueue.async { [weak self] in
+            guard let self, !self.isPausedForFrames else { return }
+            self.videoWriter?.appendSystemAudio(buf)
+        }
     }
 
     nonisolated func captureEngineDidStop(_ engine: CaptureEngine) {
@@ -352,7 +387,10 @@ extension RecordingManager: MicrophoneCapturerDelegate {
     nonisolated func microphoneCapturer(_ capturer: MicrophoneCapturer,
                                         didOutputSample sampleBuffer: CMSampleBuffer) {
         let buf = sampleBuffer
-        writerQueue.async { [weak self] in self?.videoWriter?.appendMicAudio(buf) }
+        writerQueue.async { [weak self] in
+            guard let self, !self.isPausedForFrames else { return }
+            self.videoWriter?.appendMicAudio(buf)
+        }
     }
 }
 
