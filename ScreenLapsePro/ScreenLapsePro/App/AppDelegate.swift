@@ -180,7 +180,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hostVC.view.translatesAutoresizingMaskIntoConstraints = false
 
         pop.contentViewController = hostVC
-        pop.contentSize = NSSize(width: 320, height: 520)
+        pop.contentSize = NSSize(width: 320, height: 660)
         popover = pop
         return pop
     }

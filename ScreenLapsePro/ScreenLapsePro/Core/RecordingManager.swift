@@ -276,6 +276,7 @@ final class RecordingManager: ObservableObject {
         outputURL = finalURL
 
         if let url = finalURL {
+            RecentRecordingsStore.shared.add(url: url, mode: currentMode.label)
             NSWorkspace.shared.selectFile(
                 url.path,
                 inFileViewerRootedAtPath: url.deletingLastPathComponent().path

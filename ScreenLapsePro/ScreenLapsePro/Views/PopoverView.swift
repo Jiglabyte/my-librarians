@@ -17,6 +17,7 @@ private enum ModeSegment: String, CaseIterable {
 struct PopoverView: View {
 
     @StateObject private var manager = RecordingManager()
+    @StateObject private var recents = RecentRecordingsStore.shared
 
     @State private var selectedSegment:    ModeSegment = .normal
     @State private var selectedFPS:        Int         = 30
@@ -78,12 +79,104 @@ struct PopoverView: View {
                 .padding(.horizontal, 14)
                 .padding(.bottom, 14)
 
+            if !recents.items.isEmpty && !manager.isRecording {
+                Divider().opacity(0.4)
+                recentsSection
+            }
+
             if showError, let err = manager.error {
                 errorBanner(err)
             }
 
             quitFooter
         }
+    }
+
+    // MARK: - Recents Section
+
+    private var recentsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("RECENT")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .tracking(0.6)
+                Spacer()
+                Button { recents.clear() } label: {
+                    Text("Clear")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            VStack(spacing: 4) {
+                ForEach(recents.items.prefix(3)) { item in
+                    recentRow(item)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    @ViewBuilder
+    private func recentRow(_ entry: RecentRecording) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: entry.fileExists ? "film" : "film.slash")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(entry.displayName)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text("\(entry.mode) · \(shortDate(entry.createdAt))")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 4)
+
+            if entry.fileExists {
+                Button { recents.open(entry) } label: {
+                    Image(systemName: "play.circle")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Play")
+
+                Button { recents.revealInFinder(entry) } label: {
+                    Image(systemName: "folder")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Show in Finder")
+            } else {
+                Button { recents.remove(entry) } label: {
+                    Image(systemName: "xmark.circle")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .help("Remove from list")
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Color.secondary.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+    }
+
+    private func shortDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, HH:mm"
+        return formatter.string(from: date)
     }
 
     // MARK: - Quit Footer
