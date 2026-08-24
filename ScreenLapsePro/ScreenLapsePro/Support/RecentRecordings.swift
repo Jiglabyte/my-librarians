@@ -22,7 +22,12 @@ struct RecentRecording: Identifiable, Codable, Hashable {
 
 /// Persists the last few recordings in UserDefaults so the popover can list
 /// them across launches.
-@MainActor
+///
+/// Not marked @MainActor because that would force the `static let shared`
+/// initializer through main-actor isolation, which fails in the nonisolated
+/// static context. All mutations happen from SwiftUI views and the
+/// @MainActor RecordingManager, so `@Published` updates already land on the
+/// main thread in practice.
 final class RecentRecordingsStore: ObservableObject {
 
     // MARK: Public
