@@ -23,7 +23,7 @@ final class GlobalHotkey {
     // MARK: Register
 
     /// Registers `⌃⇧R` (control + shift + R) by default. Safe to call more than once.
-    func register(keyCode: UInt32 = UInt32(kVK_ANS_R),
+    func register(keyCode: UInt32 = UInt32(kVK_ANSI_R),
                   modifiers: UInt32 = UInt32(controlKey | shiftKey),
                   onFire: @escaping () -> Void) {
 
