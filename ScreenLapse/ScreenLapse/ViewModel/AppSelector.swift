@@ -218,12 +218,14 @@ struct OptionsView: View {
     @AppStorage("timeLapseMultiplier") private var timeLapseMultiplier: Int = 0
 
     var body: some View {
-        VStack(spacing: 6) {
-            HStack {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 18) {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Resolution")
                     Text("Frame Rate")
                 }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 10) {
                     Picker("", selection: $highRes) {
                         Text("High (auto)").tag(2)
@@ -253,7 +255,10 @@ struct OptionsView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Quality")
                     Text("Background")
-                }.padding(.leading, isMacOS12 ? 0 : 8)
+                }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.leading, isMacOS12 ? 0 : 8)
                 VStack(alignment: .leading, spacing: 10) {
                     Picker("", selection: $videoQuality) {
                         Text("High").tag(1.0)
@@ -361,12 +366,13 @@ struct OptionsView: View {
             }
 
             // ── ScreenLapse time-lapse row (unique to our app) ──────────────
+            Divider()
             HStack(spacing: 8) {
                 Image(systemName: "forward.fill")
                     .font(.subheadline)
                     .foregroundColor(.accentColor)
                 Text("Time-Lapse")
-                    .font(.subheadline)
+                    .font(.subheadline.weight(.medium))
                 Picker("", selection: $timeLapseMultiplier) {
                     Text("Off").tag(0)
                     Text("5×").tag(5)

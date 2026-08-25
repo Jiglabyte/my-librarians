@@ -322,10 +322,16 @@ struct SelectorView: View {
             }
         }
         .frame(width: 110, height: 80)
+        .contentShape(Rectangle())
         .onHover{ hovering in
-            backgroundOpacity = hovering ? 0.2 : 0.0001
+            backgroundOpacity = hovering ? 0.12 : 0.0001
         }
-        .background( .primary.opacity(backgroundOpacity) )
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(.primary.opacity(backgroundOpacity))
+                .padding(4)
+        )
+        .animation(.easeInOut(duration: 0.15), value: backgroundOpacity)
     }
 }
 
