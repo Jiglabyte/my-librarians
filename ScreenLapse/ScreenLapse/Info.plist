@@ -46,6 +46,8 @@
 	<string>Scriptable</string>
 	<key>SUFeedURL</key>
 	<string>https://updates.screenlapse.app/appcast.xml</string>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
