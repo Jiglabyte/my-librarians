@@ -22,6 +22,7 @@ struct StatusBarItem: View {
     @StateObject private var popoverState = PopoverState.shared
     //@NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @AppStorage("miniStatusBar") private var miniStatusBar: Bool = false
+    @AppStorage("hideControlsWhileRecording") private var hideControls: Bool = false
     //@AppStorage("highlightMouse") private var highlightMouse: Bool = false
     private var appDelegate = AppDelegate.shared
     
@@ -29,6 +30,16 @@ struct StatusBarItem: View {
         HStack(spacing: 0) {
             if SCContext.streamType != nil {
                 ZStack {
+                  if hideControls {
+                    // Clean recording mode: show only a small static red dot in the
+                    // menu bar. No buttons, no timer — control is via hotkeys only,
+                    // and the floating pill is suppressed (see onReceive below).
+                    // The view stays alive so the auto-stop timer keeps running.
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 9, height: 9)
+                        .padding(.horizontal, 3)
+                  } else {
                     Rectangle()
                         .fill(Color.mypurple)
                         .shadow(color: .black.opacity(0.3), radius: 4)
@@ -135,6 +146,7 @@ struct StatusBarItem: View {
                             }
                         }
                     }
+                  }
                 }
                 .padding([.leading,.trailing], 4)
                 .popover(isPresented: $popoverState.isShowing, arrowEdge: .bottom) {
@@ -144,6 +156,12 @@ struct StatusBarItem: View {
                     recordingLength = SCContext.getRecordingLength()
                     let timePassed = Date.now.timeIntervalSince(SCContext.startTime ?? t)
                     if SCContext.autoStop != 0 && timePassed / 60 >= CGFloat(SCContext.autoStop) { SCContext.stopRecording() }
+                    // Clean recording mode: never show the floating pill and make
+                    // sure any open one is closed. Control is hotkeys-only.
+                    if hideControls {
+                        NSApp.windows.first(where: { $0.title == "Recording Controller".local })?.close()
+                        return
+                    }
                     // When "always show floating controller" is on, the pill is shown
                     // during recording regardless of whether the menu-bar item is
                     // occluded. Otherwise it only appears as a fallback when the
@@ -163,7 +181,7 @@ struct StatusBarItem: View {
                         }
                     }
                 }
-                if !miniStatusBar {
+                if !miniStatusBar && !hideControls {
                     if SCContext.streamType != .systemaudio {
                         if SCContext.streamType != .idevice {
                             Button(action:{

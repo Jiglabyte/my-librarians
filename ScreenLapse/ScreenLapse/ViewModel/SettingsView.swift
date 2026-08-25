@@ -103,6 +103,7 @@ struct RecorderView: View {
     @AppStorage("trimAfterRecord")  private var trimAfterRecord: Bool = false
     @AppStorage("miniStatusBar")    private var miniStatusBar: Bool = false
     @AppStorage("showFloatingController") private var showFloatingController: Bool = false
+    @AppStorage("hideControlsWhileRecording") private var hideControlsWhileRecording: Bool = false
     @AppStorage("hideSelf")         private var hideSelf: Bool = true
     @AppStorage("preventSleep")     private var preventSleep: Bool = true
     @AppStorage("showPreview")      private var showPreview: Bool = true
@@ -132,6 +133,9 @@ struct RecorderView: View {
                 SToggle("Mini size Menu Bar controller", isOn: $miniStatusBar)
                 SDivider()
                 SToggle("Always show floating recorder controls", isOn: $showFloatingController, tips: "Keeps a floating control pill on screen while recording, instead of only in the menu bar.")
+                    .disabled(hideControlsWhileRecording)
+                SDivider()
+                SToggle("Clean recording (hide all controls, hotkeys only)", isOn: $hideControlsWhileRecording, tips: "Hides the floating pill and menu-bar controls during recording, leaving just a small red dot. Use the Stop and Pause/Resume hotkeys (set them in the Shortcuts tab) to control recording.")
                 SDivider()
                 SToggle("Prevent Mac from sleeping while recording", isOn: $preventSleep)
                 SDivider()

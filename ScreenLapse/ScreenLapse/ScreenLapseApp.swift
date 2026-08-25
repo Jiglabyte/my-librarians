@@ -434,6 +434,9 @@ func findNSSplitVIew(view: NSView?) -> NSSplitView? {
 
 func getStatusBarWidth() -> CGFloat {
     @AppStorage("miniStatusBar") var miniStatusBar: Bool = false
+    @AppStorage("hideControlsWhileRecording") var hideControls: Bool = false
+    // Clean recording mode shows only a small red dot while recording.
+    if hideControls && SCContext.streamType != nil { return 22.0 }
     var width = 158.0
     switch SCContext.streamType {
     case nil: width = miniStatusBar ? 36.0 : 36.0
