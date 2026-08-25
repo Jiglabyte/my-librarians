@@ -350,10 +350,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, SCStreamDelegate, SCStreamOu
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         closeAllWindow()
         if showOnDock { _ = applicationShouldHandleReopen(NSApp, hasVisibleWindows: true) }
-        tips("Would you like to use H.265 format for better video quality and smaller file size?",
-             id: "qr.switch-to-h265.note", buttonTitle: "Use H.265", switchButton: true) {
-            ud.setValue(Encoder.h265.rawValue, forKey: "encoder")
-        }
+        // H.265 is already the default encoder (see @AppStorage("encoder") = .h265),
+        // so the old launch-time "switch to H.265?" prompt was redundant and nagged
+        // on every launch. Removed — the codec is a permanent setting in Preferences.
     }
     
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

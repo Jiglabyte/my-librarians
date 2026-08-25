@@ -144,9 +144,14 @@ struct StatusBarItem: View {
                     recordingLength = SCContext.getRecordingLength()
                     let timePassed = Date.now.timeIntervalSince(SCContext.startTime ?? t)
                     if SCContext.autoStop != 0 && timePassed / 60 >= CGFloat(SCContext.autoStop) { SCContext.stopRecording() }
+                    // When "always show floating controller" is on, the pill is shown
+                    // during recording regardless of whether the menu-bar item is
+                    // occluded. Otherwise it only appears as a fallback when the
+                    // menu-bar item is hidden (the original behaviour).
+                    let alwaysFloat = ud.bool(forKey: "showFloatingController")
                     if let visible = statusBarItem.button?.window?.occlusionState.contains(.visible) {
-                        if visible { NSApp.windows.first(where: { $0.title == "Recording Controller".local })?.close(); return }
-                        if SCContext.streamType != nil  && !visible && !(NSApp.windows.first(where: { $0.title == "Recording Controller".local })?.isVisible ?? false) {
+                        if visible && !alwaysFloat { NSApp.windows.first(where: { $0.title == "Recording Controller".local })?.close(); return }
+                        if SCContext.streamType != nil && (alwaysFloat || !visible) && !(NSApp.windows.first(where: { $0.title == "Recording Controller".local })?.isVisible ?? false) {
                             guard let screen = SCContext.getScreenWithMouse() else { return }
                             let width = getStatusBarWidth()
                             let wX = (screen.frame.width - width) / 2
